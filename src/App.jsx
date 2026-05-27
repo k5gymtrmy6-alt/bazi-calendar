@@ -336,6 +336,250 @@ function MeseModal({ mese, idx, onClose }) {
   );
 }
 
+// ── Events Section (Calendar) ─────────────────────────────────────────────────
+function EventsSection({ events, dateKey, setEvents }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newText, setNewText] = useState("");
+  const [newEl, setNewEl] = useState("legno");
+  const dayEvents = events[dateKey] || [];
+
+  function addEvent() {
+    if (!newText.trim()) return;
+    const ev = { id: Date.now().toString(), testo: newText.trim(), elemento: newEl };
+    setEvents(prev => ({ ...prev, [dateKey]: [...(prev[dateKey] || []), ev] }));
+    setNewText("");
+    setShowAdd(false);
+  }
+
+  function deleteEvent(id) {
+    setEvents(prev => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter(e => e.id !== id) }));
+  }
+
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#333"}}>📅 Eventi</div>
+        <button onClick={()=>setShowAdd(s=>!s)} style={{
+          fontSize:11,padding:"3px 10px",background:showAdd?"#eee":"#4a7c59",
+          color:showAdd?"#666":"white",border:"none",borderRadius:10,cursor:"pointer",fontWeight:500
+        }}>{showAdd ? "✕ Annulla" : "+ Aggiungi"}</button>
+      </div>
+
+      {dayEvents.map(ev => {
+        const e = ELEMENTI[ev.elemento] || ELEMENTI.legno;
+        return (
+          <div key={ev.id} style={{
+            display:"flex",alignItems:"center",gap:8,padding:"7px 10px",
+            background:e.bg,borderRadius:8,marginBottom:4,border:`0.5px solid ${e.colore}44`
+          }}>
+            <div style={{width:8,height:8,borderRadius:2,background:e.colore,flexShrink:0}}/>
+            <span style={{flex:1,fontSize:12,color:"#333"}}>{ev.testo}</span>
+            <button onClick={()=>deleteEvent(ev.id)} style={{
+              background:"none",border:"none",color:"#ccc",fontSize:18,cursor:"pointer",
+              padding:"0 2px",lineHeight:1,flexShrink:0
+            }}>×</button>
+          </div>
+        );
+      })}
+
+      {dayEvents.length === 0 && !showAdd && (
+        <div style={{fontSize:11,color:"#ccc",textAlign:"center",padding:"4px 0"}}>Nessun evento</div>
+      )}
+
+      {showAdd && (
+        <div style={{background:"#f8f8f6",borderRadius:10,padding:"12px",border:"0.5px solid #e0e0e0",marginTop:4}}>
+          <input
+            autoFocus
+            value={newText}
+            onChange={e => setNewText(e.target.value)}
+            onKeyDown={e => { if(e.key==="Enter") addEvent(); if(e.key==="Escape") setShowAdd(false); }}
+            placeholder="Nome evento…"
+            style={{width:"100%",fontSize:13,marginBottom:10,boxSizing:"border-box"}}
+          />
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+            {Object.entries(ELEMENTI).map(([k, e]) => (
+              <div key={k} onClick={()=>setNewEl(k)} style={{
+                display:"flex",alignItems:"center",gap:3,padding:"4px 9px",borderRadius:12,
+                cursor:"pointer",fontSize:11,fontWeight:newEl===k?600:400,
+                background: newEl===k ? e.colore : e.bg,
+                color: newEl===k ? "white" : e.colore,
+                border: `0.5px solid ${e.colore}55`,
+                transition:"background 0.15s"
+              }}>
+                {e.char} {e.nome}
+              </div>
+            ))}
+          </div>
+          <button onClick={addEvent} style={{
+            width:"100%",padding:"8px",fontSize:13,background:"#4a7c59",
+            color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500
+          }}>
+            Aggiungi evento
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Analog Timer ──────────────────────────────────────────────────────────────
+function AnalogTimer({ durata, el, onClose }) {
+  const total = Math.max(1, durata) * 60;
+  const [remaining, setRemaining] = useState(total);
+  const [running, setRunning] = useState(false);
+  const done = remaining === 0;
+  const e = ELEMENTI[el] || ELEMENTI.terra;
+
+  useEffect(() => {
+    if (!running || done) return;
+    const id = setInterval(() => setRemaining(r => r <= 1 ? 0 : r - 1), 1000);
+    return () => clearInterval(id);
+  }, [running, done]);
+
+  const pct = remaining / total;
+  const R = 44, CX = 55, CY = 55, circ = 2 * Math.PI * R;
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const fillColor = done ? "#4a7c59" : e.colore;
+
+  return (
+    <div style={{
+      background:e.bg,borderRadius:12,padding:"14px 12px",
+      border:`0.5px solid ${e.colore}33`,marginTop:6,marginBottom:2,
+      display:"flex",flexDirection:"column",alignItems:"center",gap:10
+    }}>
+      <svg width={110} height={110} viewBox="0 0 110 110">
+        {/* Track */}
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke={`${e.colore}22`} strokeWidth={10}/>
+        {/* Progress arc */}
+        <circle
+          cx={CX} cy={CY} r={R}
+          fill="none"
+          stroke={fillColor}
+          strokeWidth={10}
+          strokeDasharray={circ}
+          strokeDashoffset={circ * (1 - pct)}
+          strokeLinecap="round"
+          style={{
+            transform:"rotate(-90deg)",
+            transformOrigin:`${CX}px ${CY}px`,
+            transition: running ? "stroke-dashoffset 0.9s linear" : "none"
+          }}
+        />
+        {done ? (
+          <text x={CX} y={CY+5} textAnchor="middle" fontSize={22} fill="#4a7c59" fontWeight={700} fontFamily="inherit">✓</text>
+        ) : (
+          <>
+            <text x={CX} y={CY+4} textAnchor="middle" fontSize={17} fill={e.colore} fontWeight={600} fontFamily="inherit">
+              {String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
+            </text>
+            <text x={CX} y={CY+18} textAnchor="middle" fontSize={10} fill="#aaa" fontFamily="inherit">{durata} min</text>
+          </>
+        )}
+      </svg>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        {!done && (
+          <button onClick={()=>setRunning(r=>!r)} style={{
+            fontSize:18,padding:"7px 16px",background:running?"#f5f5f5":e.colore,
+            color:running?"#444":"white",border:"none",borderRadius:8,cursor:"pointer",
+            lineHeight:1,fontWeight:600,transition:"background 0.15s"
+          }}>
+            {running ? "⏸" : "▶"}
+          </button>
+        )}
+        {done && (
+          <button onClick={()=>{setRemaining(total);setRunning(false);}} style={{
+            fontSize:13,padding:"7px 14px",background:"#4a7c59",color:"white",
+            border:"none",borderRadius:8,cursor:"pointer"
+          }}>↺ Ripeti</button>
+        )}
+        {!done && (
+          <button onClick={()=>{setRemaining(total);setRunning(false);}} style={{
+            fontSize:13,padding:"7px 10px",background:"none",border:"0.5px solid #ddd",
+            borderRadius:8,cursor:"pointer",color:"#aaa"
+          }}>↺</button>
+        )}
+        <button onClick={onClose} style={{
+          fontSize:13,padding:"7px 12px",background:"none",border:"0.5px solid #ddd",
+          borderRadius:8,cursor:"pointer",color:"#666"
+        }}>✕</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Routine Stats ─────────────────────────────────────────────────────────────
+function RoutineStats({ routineLog, routineCfg, onClose }) {
+  const oggi = new Date();
+  const days = Array.from({length:14}, (_, i) => {
+    const d = new Date(oggi.getTime() - (13-i) * 86400000);
+    const key = d.toDateString();
+    const tasks = routineCfg.filter(t => t.attiva);
+    const log = routineLog[key] || {};
+    const done = tasks.filter(t => log[t.id]).length;
+    return {
+      key, d,
+      label: d.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,1).toUpperCase(),
+      pct: tasks.length ? done / tasks.length : 0,
+      done, total: tasks.length,
+      isOggi: d.toDateString() === oggi.toDateString()
+    };
+  });
+
+  const avgPct = days.filter(d=>d.total>0).reduce((a,d)=>a+d.pct,0) / Math.max(1,days.filter(d=>d.total>0).length);
+  const streak = (() => {
+    let s = 0;
+    for (let i = 13; i >= 0; i--) {
+      if (days[i].pct === 1) s++;
+      else break;
+    }
+    return s;
+  })();
+
+  return (
+    <div style={{background:"#f8f8f6",borderRadius:12,padding:"14px",marginBottom:10,border:"0.5px solid #e8e8e8"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#333"}}>📊 Storico 14 giorni</div>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:16,color:"#aaa",cursor:"pointer",padding:"0 2px"}}>✕</button>
+      </div>
+
+      {/* Summary chips */}
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
+        <div style={{background:"#fff",borderRadius:8,padding:"6px 10px",border:"0.5px solid #eee",flex:1,textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:700,color:"#4a7c59"}}>{streak}</div>
+          <div style={{fontSize:10,color:"#888"}}>streak oggi</div>
+        </div>
+        <div style={{background:"#fff",borderRadius:8,padding:"6px 10px",border:"0.5px solid #eee",flex:1,textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:700,color:"#333"}}>{Math.round(avgPct*100)}%</div>
+          <div style={{fontSize:10,color:"#888"}}>media 14gg</div>
+        </div>
+        <div style={{background:"#fff",borderRadius:8,padding:"6px 10px",border:"0.5px solid #eee",flex:1,textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:700,color:"#333"}}>{days.filter(d=>d.pct===1).length}</div>
+          <div style={{fontSize:10,color:"#888"}}>complete</div>
+        </div>
+      </div>
+
+      {/* Bar chart */}
+      <div style={{display:"flex",gap:3,alignItems:"flex-end",padding:"4px 0"}}>
+        {days.map(({key, label, pct, isOggi}) => (
+          <div key={key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+            <div style={{height:40,display:"flex",alignItems:"flex-end",width:"100%"}}>
+              <div style={{
+                width:"100%",
+                height:`${Math.max(2, pct*40)}px`,
+                background: pct===1 ? "#4a7c59" : pct>0 ? "#4a7c5966" : "#e8e8e8",
+                borderRadius:3,
+                transition:"height 0.3s"
+              }}/>
+            </div>
+            <div style={{fontSize:8,color:isOggi?"#4a7c59":"#bbb",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Top Navigation ────────────────────────────────────────────────────────────
 function TopNav({ view, setView }) {
   const isUtility = ["routine","habit","todo"].includes(view);
@@ -345,7 +589,7 @@ function TopNav({ view, setView }) {
         {[
           {k:"calendario", label:"Calendario", ico:"🗓"},
           {k:"utility",    label:"Utility",    ico:"⚡"},
-          {k:"impostazioni",label:"Impostaz.", ico:"⚙"},
+          {k:"impostazioni",label:"Impostaz.", ico:"⚙️"},
           {k:"bazi",       label:"Ba-Zi",      ico:"☯"},
         ].map(({k,label,ico})=>{
           const active = k==="utility" ? isUtility : view===k;
@@ -361,15 +605,28 @@ function TopNav({ view, setView }) {
           );
         })}
       </div>
+
+      {/* Utility sub-nav with icons */}
       {isUtility && (
-        <div style={{display:"flex",gap:6,padding:"6px 12px",background:"#fafafa",borderBottom:"0.5px solid #eee",maxWidth:480,margin:"0 auto"}}>
-          {[{k:"routine",l:"Morning Routine"},{k:"habit",l:"Habit Tracker"},{k:"todo",l:"To-Do List"}].map(({k,l})=>(
+        <div style={{display:"flex",padding:"6px 10px",background:"#fafafa",borderBottom:"0.5px solid #eee",maxWidth:480,margin:"0 auto",gap:6}}>
+          {[
+            {k:"routine", l:"Routine",  ico:"🌅", desc:"Morning"},
+            {k:"habit",   l:"Habit",    ico:"📊", desc:"Tracker"},
+            {k:"todo",    l:"To-Do",    ico:"✅", desc:"Liste"},
+          ].map(({k,l,ico,desc})=>(
             <button key={k} onClick={()=>setView(k)} style={{
-              padding:"4px 12px",fontSize:11,borderRadius:14,border:"none",cursor:"pointer",
+              flex:1,
+              display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+              padding:"8px 4px",
+              borderRadius:12,border:"none",cursor:"pointer",
               background:view===k?"#4a7c59":"transparent",
-              color:view===k?"white":"#666",
-              fontWeight:view===k?600:400
-            }}>{l}</button>
+              color:view===k?"white":"#777",
+              fontWeight:view===k?600:400,
+              transition:"background 0.15s",
+            }}>
+              <span style={{fontSize:20,lineHeight:1}}>{ico}</span>
+              <span style={{fontSize:11,lineHeight:1}}>{l}</span>
+            </button>
           ))}
         </div>
       )}
@@ -428,7 +685,7 @@ function BaziView() {
 }
 
 // ── Morning Routine ───────────────────────────────────────────────────────────
-function MorningRoutineView({ routineCfg, routineLog, setRoutineLog }) {
+function MorningRoutineView({ routineCfg, routineLog, setRoutineLog, setView }) {
   const oggi = new Date();
   const todayKey = oggi.toDateString();
   const tasks = routineCfg.filter(t=>t.attiva);
@@ -437,6 +694,9 @@ function MorningRoutineView({ routineCfg, routineLog, setRoutineLog }) {
   const pct = tasks.length > 0 ? Math.round((done/tasks.length)*100) : 0;
   const dayEl = TRONCO_EL[baziDay(oggi).tronco];
   const e = ELEMENTI[dayEl];
+
+  const [activeTimer, setActiveTimer] = useState(null); // taskId
+  const [showStats, setShowStats] = useState(false);
 
   function toggle(id) {
     setRoutineLog(prev=>({
@@ -447,42 +707,88 @@ function MorningRoutineView({ routineCfg, routineLog, setRoutineLog }) {
 
   return (
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
-      <div style={{background:e.bg,borderRadius:12,padding:"12px 14px",marginBottom:14,border:`0.5px solid ${e.colore}33`}}>
-        <div style={{fontSize:14,fontWeight:600}}>Morning Routine</div>
-        <div style={{fontSize:11,color:"#666",marginTop:2}}>
-          {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
-          {" — "}{done}/{tasks.length} completate
+      {/* Header — tap to toggle stats */}
+      <div onClick={()=>setShowStats(s=>!s)} style={{
+        background:e.bg,borderRadius:12,padding:"12px 14px",marginBottom:10,
+        border:`0.5px solid ${e.colore}33`,cursor:"pointer",userSelect:"none"
+      }}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:14,fontWeight:600}}>🌅 Morning Routine</div>
+            <div style={{fontSize:11,color:"#666",marginTop:2}}>
+              {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
+              {" — "}{done}/{tasks.length} completate
+            </div>
+          </div>
+          <div style={{fontSize:11,color:e.colore,background:`${e.colore}18`,borderRadius:6,padding:"3px 7px",fontWeight:500,flexShrink:0}}>
+            {pct}%
+          </div>
         </div>
-        <div style={{marginTop:8,height:4,borderRadius:2,background:"#ddd",overflow:"hidden"}}>
-          <div style={{height:"100%",borderRadius:2,background:e.colore,width:`${pct}%`,transition:"width 0.3s"}}/>
+        <div style={{marginTop:8,height:5,borderRadius:2.5,background:`${e.colore}22`,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:2.5,background:e.colore,width:`${pct}%`,transition:"width 0.4s"}}/>
         </div>
+        <div style={{fontSize:10,color:"#bbb",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
       </div>
 
+      {/* Stats panel */}
+      {showStats && (
+        <RoutineStats
+          routineLog={routineLog}
+          routineCfg={routineCfg}
+          onClose={()=>setShowStats(false)}
+        />
+      )}
+
+      {/* Task list */}
       {tasks.map(task=>{
         const isDone = !!log[task.id];
+        const timerOpen = activeTimer === task.id;
         return (
-          <div key={task.id} onClick={()=>toggle(task.id)} style={{
-            display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
-            background:isDone?"#f0faf3":"#fafafa",
-            border:`0.5px solid ${isDone?"#4a7c5944":"#eee"}`,
-            borderRadius:10,marginBottom:8,cursor:"pointer",transition:"background 0.15s"
-          }}>
-            <div style={{
-              width:24,height:24,borderRadius:"50%",flexShrink:0,
-              background:isDone?"#4a7c59":"transparent",
-              border:`2px solid ${isDone?"#4a7c59":"#ccc"}`,
-              display:"flex",alignItems:"center",justifyContent:"center"
+          <div key={task.id} style={{marginBottom:8}}>
+            <div onClick={()=>toggle(task.id)} style={{
+              display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+              background:isDone?"#f0faf3":"#fafafa",
+              border:`0.5px solid ${isDone?"#4a7c5944":"#eee"}`,
+              borderRadius:10,cursor:"pointer",transition:"background 0.15s"
             }}>
-              {isDone && <span style={{color:"white",fontSize:12,lineHeight:1}}>✓</span>}
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:isDone?400:500,
-                           textDecoration:isDone?"line-through":"none",
-                           color:isDone?"#aaa":"#111"}}>
-                {task.label}
+              {/* Checkbox */}
+              <div style={{
+                width:24,height:24,borderRadius:"50%",flexShrink:0,
+                background:isDone?"#4a7c59":"transparent",
+                border:`2px solid ${isDone?"#4a7c59":"#ccc"}`,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                transition:"background 0.2s"
+              }}>
+                {isDone && <span style={{color:"white",fontSize:12,lineHeight:1}}>✓</span>}
               </div>
-              {task.durata>0 && <div style={{fontSize:10,color:"#bbb"}}>{task.durata} min</div>}
+              {/* Label */}
+              <div style={{flex:1}}>
+                <div style={{
+                  fontSize:14,fontWeight:isDone?400:500,
+                  textDecoration:isDone?"line-through":"none",
+                  color:isDone?"#aaa":"#111"
+                }}>
+                  {task.label}
+                </div>
+                {task.durata>0 && <div style={{fontSize:10,color:"#bbb"}}>{task.durata} min</div>}
+              </div>
+              {/* Timer button */}
+              {task.durata > 0 && (
+                <div onClick={ev=>{ev.stopPropagation();setActiveTimer(timerOpen?null:task.id);}} style={{
+                  fontSize:18,lineHeight:1,cursor:"pointer",padding:"2px 4px",
+                  color:timerOpen?e.colore:"#ddd",
+                  transition:"color 0.15s"
+                }}>⏱</div>
+              )}
             </div>
+            {/* Inline timer */}
+            {timerOpen && (
+              <AnalogTimer
+                durata={task.durata}
+                el={dayEl}
+                onClose={()=>setActiveTimer(null)}
+              />
+            )}
           </div>
         );
       })}
@@ -493,16 +799,26 @@ function MorningRoutineView({ routineCfg, routineLog, setRoutineLog }) {
         </div>
       )}
       {done===tasks.length && tasks.length>0 && (
-        <div style={{textAlign:"center",padding:"1rem",fontSize:14,color:"#4a7c59",fontWeight:600}}>
+        <div style={{textAlign:"center",padding:"0.75rem",fontSize:14,color:"#4a7c59",fontWeight:600}}>
           ✅ Routine completata!
         </div>
       )}
+
+      {/* Link to settings */}
+      <div style={{textAlign:"center",marginTop:20,paddingTop:14,borderTop:"0.5px solid #f0f0f0"}}>
+        <button onClick={()=>setView("impostazioni")} style={{
+          background:"none",border:"none",cursor:"pointer",
+          fontSize:12,color:"#aaa",padding:"4px 8px"
+        }}>
+          ⚙ Configura Routine
+        </button>
+      </div>
     </div>
   );
 }
 
 // ── Habit Tracker ─────────────────────────────────────────────────────────────
-function HabitTrackerView({ habitCfg, habitLog, setHabitLog }) {
+function HabitTrackerView({ habitCfg, habitLog, setHabitLog, setView }) {
   const oggi = new Date();
   const todayKey = oggi.toDateString();
   const log = habitLog[todayKey] || {};
@@ -532,7 +848,9 @@ function HabitTrackerView({ habitCfg, habitLog, setHabitLog }) {
 
   return (
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
-      <div style={{fontSize:16,fontWeight:600,marginBottom:4}}>Habit Tracker</div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+        <div style={{fontSize:16,fontWeight:600}}>📊 Habit Tracker</div>
+      </div>
       <div style={{fontSize:12,color:"#666",marginBottom:14}}>
         {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
       </div>
@@ -541,6 +859,8 @@ function HabitTrackerView({ habitCfg, habitLog, setHabitLog }) {
         const val = log[habit.id] ?? "";
         const streak = getStreak(habit.id);
         const hasVal = val !== "" && val !== "0" && +val > 0;
+        const numVal = parseFloat(val) || 0;
+
         return (
           <div key={habit.id} style={{
             padding:"12px 14px",background:hasVal?"#f0faf3":"#fafafa",
@@ -552,13 +872,32 @@ function HabitTrackerView({ habitCfg, habitLog, setHabitLog }) {
                 <div style={{fontSize:14,fontWeight:500}}>{habit.label}</div>
                 {streak>1 && <div style={{fontSize:10,color:"#e07b39"}}>🔥 {streak} giorni di fila</div>}
               </div>
+              {/* +/- controls */}
               <div style={{display:"flex",alignItems:"center",gap:5}}>
-                <input type="number" min="0" step="0.1"
-                       value={val}
-                       onChange={e=>setVal(habit.id,e.target.value)}
-                       placeholder="0"
-                       style={{width:64,textAlign:"center",fontSize:14,fontWeight:500,padding:"6px",borderRadius:8}}
+                <button
+                  onClick={()=>setVal(habit.id, String(Math.max(0, Math.round((numVal-1)*100)/100)))}
+                  style={{
+                    width:30,height:30,borderRadius:8,border:"0.5px solid #ddd",
+                    background:"#f5f5f5",cursor:"pointer",fontSize:18,lineHeight:1,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    flexShrink:0,fontWeight:300,color:"#666"
+                  }}>−</button>
+                <input
+                  type="number" min="0" step="0.1"
+                  value={val}
+                  onChange={e=>setVal(habit.id,e.target.value)}
+                  placeholder="0"
+                  style={{width:52,textAlign:"center",fontSize:14,fontWeight:500,padding:"5px 4px",borderRadius:8}}
                 />
+                <button
+                  onClick={()=>setVal(habit.id, String(Math.round((numVal+1)*100)/100))}
+                  style={{
+                    width:30,height:30,borderRadius:8,border:"none",
+                    background:hasVal?"#4a7c59":"#e8e8e8",cursor:"pointer",fontSize:18,lineHeight:1,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    flexShrink:0,fontWeight:400,color:hasVal?"white":"#555",
+                    transition:"background 0.15s"
+                  }}>+</button>
                 {habit.unita && <span style={{fontSize:12,color:"#888",minWidth:20}}>{habit.unita}</span>}
               </div>
             </div>
@@ -583,6 +922,15 @@ function HabitTrackerView({ habitCfg, habitLog, setHabitLog }) {
           Nessun habit definito.<br/>Aggiungili nelle Impostazioni → Habit.
         </div>
       )}
+
+      <div style={{textAlign:"center",marginTop:20,paddingTop:14,borderTop:"0.5px solid #f0f0f0"}}>
+        <button onClick={()=>setView("impostazioni")} style={{
+          background:"none",border:"none",cursor:"pointer",
+          fontSize:12,color:"#aaa",padding:"4px 8px"
+        }}>
+          ⚙ Configura Habit
+        </button>
+      </div>
     </div>
   );
 }
@@ -768,7 +1116,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, habitCfg, se
           <div style={{borderTop:"0.5px solid #eee"}}/>
           <Toggle label="Ekadashi"                   on={cfg.showEk}      onChange={v=>setCfg(c=>({...c,showEk:v}))}/>
           <div style={{marginTop:8,fontSize:10,color:"#777",padding:10,background:"#f5f5f5",borderRadius:8,lineHeight:1.6}}>
-            <strong>Prossime versioni:</strong> personalizzazione terminologia, fase lunare per GPS, timer routine, grafici habit, notifiche push.
+            <strong>Prossime versioni:</strong> personalizzazione terminologia, fase lunare per GPS, grafici habit, notifiche push.
           </div>
         </div>
       )}
@@ -880,6 +1228,7 @@ export default function App() {
   // Persistent state via localStorage
   const [cfg, setCfg]             = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true});
   const [note, setNote]           = useLS("bazi_note",         {});
+  const [events, setEvents]       = useLS("bazi_events",       {});
   const [routineCfg, setRoutineCfg] = useLS("bazi_routine_cfg", DEFAULT_ROUTINE_CFG);
   const [routineLog, setRoutineLog] = useLS("bazi_routine_log", {});
   const [habitCfg, setHabitCfg]   = useLS("bazi_habit_cfg",   DEFAULT_HABIT_CFG);
@@ -959,6 +1308,7 @@ export default function App() {
                   const haNote=!!note[d.toDateString()];
                   const dayLog=routineLog[d.toDateString()];
                   const hasRoutine=dayLog&&Object.keys(dayLog).some(k=>dayLog[k]);
+                  const dayEvents=events[d.toDateString()]||[];
                   const txtColor=isSel?"white":e.colore;
                   return (
                     <div key={ci} onClick={()=>setSelDay(isSel?null:{date:d,bazi})} style={{
@@ -966,8 +1316,24 @@ export default function App() {
                       border:isOggi?`2px solid ${e.colore}`:`0.5px solid ${e.colore}44`,
                       borderRadius:7,cursor:"pointer",textAlign:"center",
                       height:76,display:"flex",flexDirection:"column",
-                      padding:"2px 1px",boxSizing:"border-box",transition:"background 0.15s",position:"relative"
+                      padding:"2px 1px",boxSizing:"border-box",transition:"background 0.15s",
+                      position:"relative"
                     }}>
+                      {/* Event dots — right side vertical strip */}
+                      {dayEvents.length>0 && (
+                        <div style={{
+                          position:"absolute",right:2,top:5,
+                          display:"flex",flexDirection:"column",gap:2,zIndex:1
+                        }}>
+                          {dayEvents.slice(0,5).map(ev=>(
+                            <div key={ev.id} style={{
+                              width:3,height:9,borderRadius:1.5,
+                              background:isSel?"rgba(255,255,255,0.75)":ELEMENTI[ev.elemento]?.colore||"#666"
+                            }}/>
+                          ))}
+                        </div>
+                      )}
+
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 4px",flexShrink:0}}>
                         <span style={{fontSize:13,fontWeight:800,color:txtColor,lineHeight:1}}>{lunarDay}</span>
                         <span style={{fontSize:12,lineHeight:1}}>{mk}</span>
@@ -1015,6 +1381,13 @@ export default function App() {
                     </div>
                     <button onClick={()=>setSelDay(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#555",padding:"0 4px"}}>✕</button>
                   </div>
+
+                  {/* Events section — above Ba-Zi */}
+                  <EventsSection
+                    events={events}
+                    dateKey={selDay.date.toDateString()}
+                    setEvents={setEvents}
+                  />
 
                   {/* Ba-Zi + Luna */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
@@ -1091,8 +1464,8 @@ export default function App() {
           </div>
         )}
 
-        {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog}/>}
-        {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} habitLog={habitLog} setHabitLog={setHabitLog}/>}
+        {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView}/>}
+        {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView}/>}
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists}/>}
         {view==="bazi"         && <BaziView/>}
         {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} habitCfg={habitCfg} setHabitCfg={setHabitCfg}/>}
