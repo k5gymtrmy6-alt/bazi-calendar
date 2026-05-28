@@ -457,7 +457,7 @@ function PromemoriaSection({ promemoria, dateKey, setPromemoria, dark }) {
     setNewText(""); setShowAdd(false);
   }
   function toggleFatto(id) {
-    setPromemoria(prev => ({ ...prev, [dateKey]: (prev[dateKey]||[]).map(p => p.id===id ? {...p, fatto:!p.fatto} : p) }));
+    setPromemoria(prev => ({ ...prev, [dateKey]: (prev[dateKey]||[]).map(p => p.id===id ? {...p, fatto:!p.fatto, fattoAt:!p.fatto?Date.now():undefined} : p) }));
   }
   function deleteProm(id) {
     setPromemoria(prev => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter(p => p.id !== id) }));
@@ -1396,7 +1396,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
 }
 
 // ── Impostazioni ──────────────────────────────────────────────────────────────
-function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, defaultSection="calendario" }) {
+function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="calendario" }) {
   const dark = cfg.darkMode || false;
   const [section, setSection] = useState(defaultSection);
   const [newTask, setNewTask] = useState(""), [newTaskDur, setNewTaskDur] = useState(5), [newTaskTipo, setNewTaskTipo] = useState("tempo");
@@ -1405,6 +1405,8 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
   const [editingHabit, setEditingHabit] = useState(null), [editHLabel, setEditHLabel] = useState(""), [editHUnit, setEditHUnit] = useState(""), [editHColore, setEditHColore] = useState(HABIT_COLORS[0]);
   const [showRDel, setShowRDel] = useState(false), [showHDel, setShowHDel] = useState(false);
   const recentRDel = cleanOld(routineDeleted), recentHDel = cleanOld(habitDeleted);
+  const recentTDel = cleanOld(todoDeleted||[]);
+  const totalTrash = recentRDel.length + recentHDel.length + recentTDel.length;
 
   // keep section in sync when navigating from DotsMenu
   useEffect(() => { setSection(defaultSection); }, [defaultSection]);
@@ -1521,6 +1523,26 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               <span style={{fontSize:11,color:"var(--text-sub)"}}>ogni giorno</span>
             </div>
           )}
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Svuota cestini */}
+          <div style={{paddingTop:2}}>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Cestini eliminati</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:totalTrash>0?(dark?"#2a0a0a":"#fff5f5"):"var(--bg-card)",borderRadius:10,border:`0.5px solid ${totalTrash>0?"#e53e3e33":"var(--border-ter)"}`}}>
+              <div>
+                <div style={{fontSize:13,color:totalTrash>0?"#e53e3e":"var(--text-sub)",fontWeight:500}}>
+                  {totalTrash>0 ? `${totalTrash} element${totalTrash===1?"o":"i"} nel cestino` : "Cestini vuoti"}
+                </div>
+                <div style={{fontSize:10,color:"var(--text-ter)",marginTop:2}}>
+                  Routine: {recentRDel.length} · Habit: {recentHDel.length} · To-Do: {recentTDel.length}
+                </div>
+              </div>
+              {totalTrash>0 && (
+                <button onClick={()=>{if(window.confirm(`Eliminare definitivamente ${totalTrash} element${totalTrash===1?"o":"i"}? L'azione non è reversibile.`)){setRoutineDeleted([]);setHabitDeleted([]);setTodoDeleted([]);}}} style={{fontSize:11,padding:"5px 12px",background:"#e53e3e",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>
+                  🗑 Svuota
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1692,8 +1714,9 @@ function PromemoriaMemoView({ promemoria, setPromemoria, dark }) {
   const allItems = Object.entries(promemoria).flatMap(([dk,items])=>
     (items||[]).map(p=>({...p, dateKey:dk, dateObj:new Date(dk)}))
   );
+  const THIRTY_MS = 30*86400000;
   const pending = allItems.filter(p=>p.fatto!==true).sort((a,b)=>a.dateObj-b.dateObj);
-  const done    = allItems.filter(p=>p.fatto===true).sort((a,b)=>b.dateObj-a.dateObj);
+  const done    = allItems.filter(p=>p.fatto===true&&(!p.fattoAt||Date.now()-p.fattoAt<THIRTY_MS)).sort((a,b)=>b.dateObj-a.dateObj);
 
   const grouped = {};
   pending.forEach(p=>{ if(!grouped[p.dateKey])grouped[p.dateKey]=[]; grouped[p.dateKey].push(p); });
@@ -1714,7 +1737,7 @@ function PromemoriaMemoView({ promemoria, setPromemoria, dark }) {
   }
 
   function toggleFatto(dateKey, id) {
-    setPromemoria(prev=>({...prev,[dateKey]:(prev[dateKey]||[]).map(p=>p.id===id?{...p,fatto:!p.fatto}:p)}));
+    setPromemoria(prev=>({...prev,[dateKey]:(prev[dateKey]||[]).map(p=>p.id===id?{...p,fatto:!p.fatto,fattoAt:!p.fatto?Date.now():undefined}:p)}));
   }
   function deleteProm(dateKey, id) {
     setPromemoria(prev=>({...prev,[dateKey]:(prev[dateKey]||[]).filter(p=>p.id!==id)}));
@@ -1859,6 +1882,21 @@ export default function App() {
   const accent = cfg.followDayElement
     ? ELEMENTI[TRONCO_EL[baziDay(oggi).tronco]].colore
     : (cfg.accentColor || "#4a7c59");
+
+  // Cleanup fatto promemoria older than 30 days (runs once on mount)
+  useEffect(()=>{
+    const THIRTY_MS = 30*86400000;
+    setPromemoria(prev=>{
+      let changed=false;
+      const cleaned={};
+      Object.entries(prev).forEach(([dk,items])=>{
+        const filtered=(items||[]).filter(p=>!(p.fatto&&p.fattoAt&&Date.now()-p.fattoAt>THIRTY_MS));
+        if(filtered.length!==(items||[]).length) changed=true;
+        if(filtered.length>0) cleaned[dk]=filtered;
+      });
+      return changed?cleaned:prev;
+    });
+  },[]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update CSS accent variables whenever accent or dark mode changes
   useEffect(()=>{
@@ -2150,7 +2188,7 @@ export default function App() {
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
         {view==="memo"         && <PromemoriaMemoView promemoria={promemoria} setPromemoria={setPromemoria} dark={dark}/>}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
-        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} defaultSection={impTab}/>}
+        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab}/>}
       </div>
 
       {/* Modals */}
