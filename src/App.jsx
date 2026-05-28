@@ -109,12 +109,13 @@ const DEFAULT_ROUTINE_CFG = [
 ];
 
 const DEFAULT_HABIT_CFG = [
-  { id:"h1", label:"Acqua",       tipo:"numero", unita:"l"   },
-  { id:"h2", label:"Sonno",       tipo:"tempo",  unita:"h"   },
-  { id:"h3", label:"Passi",       tipo:"numero", unita:""    },
-  { id:"h4", label:"Lettura",     tipo:"tempo",  unita:"min" },
-  { id:"h5", label:"Meditazione", tipo:"tempo",  unita:"min" },
+  { id:"h1", label:"Acqua",       tipo:"numero", unita:"l",   attiva:true, colore:"#1a5276" },
+  { id:"h2", label:"Sonno",       tipo:"tempo",  unita:"h",   attiva:true, colore:"#4a7c59" },
+  { id:"h3", label:"Passi",       tipo:"numero", unita:"",    attiva:true, colore:"#8b6914" },
+  { id:"h4", label:"Lettura",     tipo:"tempo",  unita:"min", attiva:true, colore:"#b5451b" },
+  { id:"h5", label:"Meditazione", tipo:"tempo",  unita:"min", attiva:true, colore:"#6b7280" },
 ];
+const HABIT_COLORS = ["#4a7c59","#b5451b","#8b6914","#6b7280","#1a5276"];
 
 // ── Luna ──────────────────────────────────────────────────────────────────────
 const SYNODIC = 29.530588853, SIDEREAL = 27.321661, MOON_REF_JD = 2451549.7597;
@@ -182,7 +183,7 @@ function DotsMenu({ render }) {
       <button onClick={()=>setOpen(s=>!s)} style={{width:30,height:30,borderRadius:"50%",border:"0.5px solid var(--border-sec)",background:open?"var(--bg-gray2)":"var(--bg-gray)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"var(--text-sec)",letterSpacing:1.5,padding:0,flexShrink:0,lineHeight:1}}>•••</button>
       {open && <>
         <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,zIndex:299}}/>
-        <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)",boxShadow:"0 4px 24px rgba(0,0,0,0.18)",minWidth:190,zIndex:300,overflow:"hidden"}}>
+        <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",background:"var(--bg-gray)",borderRadius:12,border:"1px solid var(--border)",boxShadow:"0 6px 32px rgba(0,0,0,0.38)",minWidth:190,zIndex:300,overflow:"hidden"}}>
           {render(()=>setOpen(false))}
         </div>
       </>}
@@ -843,11 +844,12 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
 // ── Habit Stats (14-day aggregate) ───────────────────────────────────────────
 function HabitStats({ habitCfg, habitLog, onClose }) {
   const oggi = new Date();
+  const activeH = habitCfg.filter(h=>h.attiva!==false);
   const days = Array.from({length:14},(_,i)=>{
     const d=new Date(oggi.getTime()-(13-i)*86400000);
     const key=d.toDateString(), log=habitLog[key]||{};
-    const total=habitCfg.length;
-    const logged=habitCfg.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
+    const total=activeH.length;
+    const logged=activeH.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
     return{key,d,label:d.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,1).toUpperCase(),pct:total?logged/total:0,logged,total,isOggi:d.toDateString()===oggi.toDateString()};
   });
   const avgPct=days.filter(d=>d.total>0).reduce((a,d)=>a+d.pct,0)/Math.max(1,days.filter(d=>d.total>0).length);
@@ -888,9 +890,12 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
   const [showDeleted, setShowDeleted] = useState(false);
   const recentDeleted = cleanOld(habitDeleted);
 
-  // Recap stats
-  const logged=habitCfg.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
-  const pctLogged=habitCfg.length>0?Math.round((logged/habitCfg.length)*100):0;
+  // Only active habits shown in tracker
+  const activeHabits = habitCfg.filter(h=>h.attiva!==false);
+
+  // Recap stats (active only)
+  const logged=activeHabits.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
+  const pctLogged=activeHabits.length>0?Math.round((logged/activeHabits.length)*100):0;
 
   function restoreHabit(habit) {
     const {deletedAt,...clean}=habit;
@@ -944,41 +949,44 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
       </div>
       {showStats && <HabitStats habitCfg={habitCfg} habitLog={habitLog} onClose={()=>setShowStats(false)}/>}
 
-      {habitCfg.map(habit=>{
+      {activeHabits.map(habit=>{
+        const hc=habit.colore||"#4a7c59";
         const val=log[habit.id]??"", numVal=parseFloat(val)||0;
         const streak=getStreak(habit.id), hasVal=val!==""&&val!=="0"&&+val>0;
         const expanded=chartHabit===habit.id;
         return (
-          <div key={habit.id} style={{padding:"12px 14px",background:hasVal?"var(--accent-bg)":"var(--bg-card)",border:`0.5px solid ${hasVal?"#4a7c5944":"var(--border-ter)"}`,borderRadius:10,marginBottom:8}}>
+          <div key={habit.id} style={{padding:"8px 10px",background:hasVal?(dark?hc+"22":hc+"14"):"var(--bg-card)",border:`0.5px solid ${hasVal?hc+"55":"var(--border-ter)"}`,borderRadius:10,marginBottom:5}}>
             {/* Main row */}
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
               <div style={{flex:1,cursor:"pointer"}} onClick={()=>setChartHabit(expanded?null:habit.id)}>
-                <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{habit.label}</div>
-                {streak>1 && <div style={{fontSize:10,color:"#e07b39"}}>🔥 {streak} giorni di fila</div>}
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:hc,flexShrink:0}}/>
+                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{habit.label}</div>
+                  {streak>1 && <div style={{fontSize:10,color:"#e07b39"}}>🔥 {streak}</div>}
+                </div>
               </div>
               {/* +/- controls */}
-              <div style={{display:"flex",alignItems:"center",gap:5}}>
-                <button onClick={()=>setVal(habit.id,String(Math.max(0,Math.round((numVal-1)*100)/100)))} style={{width:30,height:30,borderRadius:8,border:"0.5px solid var(--border-sec)",background:"var(--bg-gray)",cursor:"pointer",fontSize:18,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:300,color:"var(--text-sec)"}}>−</button>
-                <input type="number" min="0" step="0.1" value={val} onChange={e=>setVal(habit.id,e.target.value)} placeholder="0" style={{width:52,textAlign:"center",fontSize:14,fontWeight:500,padding:"5px 4px",borderRadius:8}}/>
-                <button onClick={()=>setVal(habit.id,String(Math.round((numVal+1)*100)/100))} style={{width:30,height:30,borderRadius:8,border:"none",background:hasVal?"#4a7c59":"var(--bg-gray2)",cursor:"pointer",fontSize:18,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:400,color:hasVal?"white":"var(--text)",transition:"background 0.15s"}}>+</button>
-                {habit.unita && <span style={{fontSize:12,color:"var(--text-sub)",minWidth:20}}>{habit.unita}</span>}
+              <div style={{display:"flex",alignItems:"center",gap:4}}>
+                <button onClick={()=>setVal(habit.id,String(Math.max(0,Math.round((numVal-1)*100)/100)))} style={{width:28,height:28,borderRadius:7,border:"0.5px solid var(--border-sec)",background:"var(--bg-gray)",cursor:"pointer",fontSize:17,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:300,color:"var(--text-sec)"}}>−</button>
+                <input type="number" min="0" step="0.1" value={val} onChange={e=>setVal(habit.id,e.target.value)} placeholder="0" style={{width:48,textAlign:"center",fontSize:13,fontWeight:500,padding:"4px 3px",borderRadius:7}}/>
+                <button onClick={()=>setVal(habit.id,String(Math.round((numVal+1)*100)/100))} style={{width:28,height:28,borderRadius:7,border:"none",background:hasVal?hc:"var(--bg-gray2)",cursor:"pointer",fontSize:17,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontWeight:400,color:hasVal?"white":"var(--text)",transition:"background 0.15s"}}>+</button>
+                {habit.unita && <span style={{fontSize:11,color:"var(--text-sub)",minWidth:18}}>{habit.unita}</span>}
               </div>
             </div>
             {/* 7-day strip */}
-            <div style={{display:"flex",gap:3,marginTop:8}}>
+            <div style={{display:"flex",gap:3,marginTop:5}}>
               {days7.map(({key,label})=>{
                 const v=habitLog[key]?.[habit.id], filled=v!==undefined&&v!==""&&v!=="0"&&+v>0;
                 return (
                   <div key={key} style={{flex:1,textAlign:"center"}}>
-                    <div style={{height:4,borderRadius:2,background:filled?"#4a7c59":"var(--bg-gray2)",marginBottom:3}}/>
-                    <div style={{fontSize:8,color:key===todayKey?"#4a7c59":"var(--text-sub)",fontWeight:key===todayKey?700:400}}>{label}</div>
+                    <div style={{height:3,borderRadius:2,background:filled?hc:"var(--bg-gray2)",marginBottom:2}}/>
+                    <div style={{fontSize:8,color:key===todayKey?hc:"var(--text-sub)",fontWeight:key===todayKey?700:400}}>{label}</div>
                   </div>
                 );
               })}
             </div>
             {/* 30-day chart — expanded */}
             {expanded && <HabitChart habitId={habit.id} habitLog={habitLog}/>}
-            {!expanded && <div style={{fontSize:9,color:"var(--text-sub)",textAlign:"center",marginTop:4,opacity:0.6}}>tocca il nome per il grafico 30 giorni</div>}
           </div>
         );
       })}
@@ -1146,9 +1154,9 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
   const dark = cfg.darkMode || false;
   const [section, setSection] = useState(defaultSection);
   const [newTask, setNewTask] = useState(""), [newTaskDur, setNewTaskDur] = useState(5), [newTaskTipo, setNewTaskTipo] = useState("tempo");
-  const [newHabit, setNewHabit] = useState(""), [newHabitUnit, setNewHabitUnit] = useState("");
+  const [newHabit, setNewHabit] = useState(""), [newHabitUnit, setNewHabitUnit] = useState(""), [newHabitColore, setNewHabitColore] = useState(HABIT_COLORS[0]);
   const [editingTask, setEditingTask] = useState(null), [editLabel, setEditLabel] = useState(""), [editDur, setEditDur] = useState(0), [editTipo, setEditTipo] = useState("tempo");
-  const [editingHabit, setEditingHabit] = useState(null), [editHLabel, setEditHLabel] = useState(""), [editHUnit, setEditHUnit] = useState("");
+  const [editingHabit, setEditingHabit] = useState(null), [editHLabel, setEditHLabel] = useState(""), [editHUnit, setEditHUnit] = useState(""), [editHColore, setEditHColore] = useState(HABIT_COLORS[0]);
   const [showRDel, setShowRDel] = useState(false), [showHDel, setShowHDel] = useState(false);
   const recentRDel = cleanOld(routineDeleted), recentHDel = cleanOld(habitDeleted);
 
@@ -1282,36 +1290,52 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
         <div>
           <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Definisci i tuoi habit quotidiani da monitorare.</div>
           {habitCfg.map(habit=>{
+            const hc=habit.colore||HABIT_COLORS[0];
             if (editingHabit===habit.id) return (
               <div key={habit.id} style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:6}}>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
                   <input autoFocus value={editHLabel} onChange={e=>setEditHLabel(e.target.value)} placeholder="Nome" style={{flex:1,minWidth:100,fontSize:12}}/>
-                  <input value={editHUnit} onChange={e=>setEditHUnit(e.target.value)} placeholder="Unità" style={{width:70,fontSize:12}}/>
+                  <input value={editHUnit} onChange={e=>setEditHUnit(e.target.value)} placeholder="Unità" style={{width:64,fontSize:12}}/>
+                </div>
+                <div style={{display:"flex",gap:6,marginBottom:8}}>
+                  {HABIT_COLORS.map(c=>(
+                    <div key={c} onClick={()=>setEditHColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:editHColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
+                  ))}
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim()}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim(),colore:editHColore}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
                   <button onClick={()=>setEditingHabit(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
                 </div>
               </div>
             );
             return (
               <div key={habit.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+                <div onClick={()=>setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,attiva:!(h.attiva!==false)}:h))}
+                     style={{width:20,height:20,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:habit.attiva!==false?hc:"transparent",border:`2px solid ${habit.attiva!==false?hc:"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {habit.attiva!==false && <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>}
+                </div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{habit.label}</div>
+                  <div style={{fontSize:13,fontWeight:500,color:habit.attiva!==false?"var(--text)":"var(--text-sub)"}}>{habit.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"}</div>
                 </div>
-                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
+                <div style={{width:10,height:10,borderRadius:"50%",background:hc,flexShrink:0}}/>
+                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
                 <button onClick={()=>{setHabitDeleted(prev=>[...cleanOld(prev),{...habit,deletedAt:Date.now()}]);setHabitCfg(prev=>prev.filter(h=>h.id!==habit.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
               </div>
             );
           })}
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
             <div style={{fontSize:12,fontWeight:600,color:"#4a7c59",marginBottom:8}}>+ Aggiungi habit</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
               <input value={newHabit} onChange={e=>setNewHabit(e.target.value)} placeholder="Nome (es. Acqua)" style={{flex:1,minWidth:100,fontSize:12}}/>
               <input value={newHabitUnit} onChange={e=>setNewHabitUnit(e.target.value)} placeholder="Unità (l, h, min…)" style={{flex:1,minWidth:80,fontSize:12}}/>
-              <button onClick={()=>{if(!newHabit.trim())return;setHabitCfg(prev=>[...prev,{id:Date.now().toString(),label:newHabit.trim(),tipo:"numero",unita:newHabitUnit.trim()}]);setNewHabit("");setNewHabitUnit("");}} style={{padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
             </div>
+            <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
+              {HABIT_COLORS.map(c=>(
+                <div key={c} onClick={()=>setNewHabitColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:newHabitColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
+              ))}
+            </div>
+            <button onClick={()=>{if(!newHabit.trim())return;setHabitCfg(prev=>[...prev,{id:Date.now().toString(),label:newHabit.trim(),tipo:"numero",unita:newHabitUnit.trim(),attiva:true,colore:newHabitColore}]);setNewHabit("");setNewHabitUnit("");setNewHabitColore(HABIT_COLORS[0]);}} style={{width:"100%",padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
           </div>
           {/* Link to recently deleted */}
           <div style={{marginTop:14,paddingTop:12,borderTop:"0.5px solid var(--border-ter)",textAlign:"center"}}>
@@ -1509,7 +1533,7 @@ export default function App() {
                   const dayLog=routineLog[d.toDateString()];
                   const hasRoutine=dayLog&&Object.keys(dayLog).some(k=>dayLog[k]);
                   const dayEvs=events[d.toDateString()]||[];
-                  const txtColor=isSel?"white":e.colore;
+                  const txtColor=isSel?"white":(dark?"rgba(255,255,255,0.88)":e.colore);
                   return (
                     <div key={ci} onClick={()=>selectDay(d,bazi)} style={{
                       background:isSel?e.colore:elbg(el,dark),
@@ -1542,17 +1566,16 @@ export default function App() {
                             <div style={{fontSize:15,lineHeight:1.15,color:txtColor}}>{RAMI[bazi.ramo]}</div>
                           </>;
                           if(cv==="emoji") return <>
-                            <div style={{fontSize:16,lineHeight:1.2}}>{ANIMALI_EMOJI[bazi.ramo]}</div>
-                            <div style={{fontSize:8,lineHeight:1.2,color:txtColor,fontWeight:600}}>{ANIMALI[bazi.ramo].slice(0,6)}</div>
+                            <div style={{fontSize:20,lineHeight:1.2}}>{ANIMALI_EMOJI[bazi.ramo]}</div>
                           </>;
                           return <>
                             <div style={{fontSize:9,lineHeight:1.3,color:txtColor,fontWeight:600}}>{TRONCHI_NOMI[bazi.tronco]}</div>
-                            <div style={{fontSize:8,lineHeight:1.3,color:isSel?"rgba(255,255,255,0.85)":e.colore}}>{ANIMALI[bazi.ramo]}</div>
+                            <div style={{fontSize:8,lineHeight:1.3,color:txtColor,opacity:0.8}}>{ANIMALI[bazi.ramo]}</div>
                           </>;
                         })()}
                       </div>
                       <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:3,padding:"2px 4px",flexShrink:0,minHeight:16}}>
-                        {cfg.showGreg && <span style={{fontSize:8,color:isSel?"rgba(255,255,255,0.75)":"var(--text-sub)"}}>{d.getDate()}/{d.getMonth()+1}</span>}
+                        {cfg.showGreg && <span style={{fontSize:8,color:isSel?"rgba(255,255,255,0.92)":(dark?"rgba(255,255,255,0.7)":"rgba(0,0,0,0.58)"),fontWeight:500}}>{d.getDate()}/{d.getMonth()+1}</span>}
                         {ek && <div style={{width:7,height:7,borderRadius:"50%",background:isSel?"white":"#2e7d32",flexShrink:0}}/>}
                         {haNote && <div style={{width:5,height:5,borderRadius:"50%",background:isSel?"white":e.colore,flexShrink:0}}/>}
                         {hasRoutine && <div style={{width:5,height:5,borderRadius:"50%",background:isSel?"rgba(255,255,255,0.7)":"#4a7c5966",flexShrink:0}}/>}
