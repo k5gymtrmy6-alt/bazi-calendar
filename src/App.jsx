@@ -55,11 +55,11 @@ const TRONCHI_INFO = [
 ];
 
 const ELEMENTI = {
-  legno:   { nome:"Legno",   colore:"#4a7c59", bg:"#e8f5e9", char:"木", essenza:"Il Legno è espansione, crescita, visione. Rappresenta la primavera e il risveglio.\n\nAspetto Yang: ambizione, creatività, iniziativa, generosità.\nAspetto Yin: rigidità, frustrazione, difficoltà a lasciar andare." },
-  fuoco:   { nome:"Fuoco",   colore:"#b5451b", bg:"#fde8e0", char:"火", essenza:"Il Fuoco è trasformazione, gioia, connessione. Rappresenta l'estate e il cuore.\n\nAspetto Yang: carisma, entusiasmo, passione, chiarezza.\nAspetto Yin: ansia, impulsività, eccesso di stimolazione." },
-  terra:   { nome:"Terra",   colore:"#8b6914", bg:"#fdf3dc", char:"土", essenza:"La Terra è centro, stabilità, nutrimento. Rappresenta le transizioni tra stagioni.\n\nAspetto Yang: affidabilità, cura, concretezza, radicamento.\nAspetto Yin: preoccupazione, rimuginio, difficoltà a cambiare." },
-  metallo: { nome:"Metallo", colore:"#6b7280", bg:"#f1f1f0", char:"金", essenza:"Il Metallo è purezza, struttura, essenzialità. Rappresenta l'autunno e il discernimento.\n\nAspetto Yang: precisione, integrità, forza interiore.\nAspetto Yin: rigidità, malinconia, perfezionismo." },
-  acqua:   { nome:"Acqua",   colore:"#1a5276", bg:"#dceefb", char:"水", essenza:"L'Acqua è profondità, saggezza, flusso. Rappresenta l'inverno e la fonte di tutta la vita.\n\nAspetto Yang: intuizione, adattabilità, intelligenza.\nAspetto Yin: paura, isolamento, stagnazione." },
+  legno:   { nome:"Legno",   colore:"#4a7c59", bg:"#c5e8cc", char:"木", essenza:"Il Legno è espansione, crescita, visione. Rappresenta la primavera e il risveglio.\n\nAspetto Yang: ambizione, creatività, iniziativa, generosità.\nAspetto Yin: rigidità, frustrazione, difficoltà a lasciar andare." },
+  fuoco:   { nome:"Fuoco",   colore:"#b5451b", bg:"#f7c4ae", char:"火", essenza:"Il Fuoco è trasformazione, gioia, connessione. Rappresenta l'estate e il cuore.\n\nAspetto Yang: carisma, entusiasmo, passione, chiarezza.\nAspetto Yin: ansia, impulsività, eccesso di stimolazione." },
+  terra:   { nome:"Terra",   colore:"#8b6914", bg:"#f2dea0", char:"土", essenza:"La Terra è centro, stabilità, nutrimento. Rappresenta le transizioni tra stagioni.\n\nAspetto Yang: affidabilità, cura, concretezza, radicamento.\nAspetto Yin: preoccupazione, rimuginio, difficoltà a cambiare." },
+  metallo: { nome:"Metallo", colore:"#6b7280", bg:"#d4d4d2", char:"金", essenza:"Il Metallo è purezza, struttura, essenzialità. Rappresenta l'autunno e il discernimento.\n\nAspetto Yang: precisione, integrità, forza interiore.\nAspetto Yin: rigidità, malinconia, perfezionismo." },
+  acqua:   { nome:"Acqua",   colore:"#1a5276", bg:"#aed6f1", char:"水", essenza:"L'Acqua è profondità, saggezza, flusso. Rappresenta l'inverno e la fonte di tutta la vita.\n\nAspetto Yang: intuizione, adattabilità, intelligenza.\nAspetto Yin: paura, isolamento, stagnazione." },
 };
 const TRONCO_EL = ["legno","legno","fuoco","fuoco","terra","terra","metallo","metallo","acqua","acqua"];
 const RAMO_EL   = ["acqua","terra","legno","legno","terra","fuoco","fuoco","terra","metallo","metallo","terra","acqua"];
@@ -67,7 +67,7 @@ const EL_ORDER  = ["legno","fuoco","terra","metallo","acqua"];
 
 // Element background — light pastel in light mode, dark tint in dark mode
 function elbg(el, dark) {
-  return dark ? (ELEMENTI[el].colore + "33") : ELEMENTI[el].bg;
+  return dark ? (ELEMENTI[el].colore + "55") : ELEMENTI[el].bg;
 }
 
 function formatDaysAgo(ts) {
@@ -729,7 +729,7 @@ function BaziView({ dark }) {
 }
 
 // ── Morning Routine ───────────────────────────────────────────────────────────
-function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineLog, setView, routineDeleted, setRoutineDeleted, dark }) {
+function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineLog, setView, setImpTab, routineDeleted, setRoutineDeleted, dark }) {
   const oggi=new Date(), todayKey=oggi.toDateString();
   const tasks=routineCfg.filter(t=>t.attiva), log=routineLog[todayKey]||{};
   const done=tasks.filter(t=>log[t.id]).length;
@@ -756,8 +756,8 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>🌅 Morning Routine</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label="⚙ Impostazioni" onClick={()=>{setView("impostazioni");close();}}/>
-            <DotsItem label={`🗑 Recenti${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep/>
+            <DotsItem label="⚙ Impostazioni Routine" onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
+            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
       </div>
@@ -819,6 +819,9 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
       {showDeleted && (
         <ModalBox onClose={()=>setShowDeleted(false)} dark={dark} zIndex={400}>
           <ModalHeader title="🗑 Task eliminati di recente" onClose={()=>setShowDeleted(false)}/>
+          <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
+            ⚠️ Conservati per <strong>30 giorni</strong>, poi rimossi definitivamente
+          </div>
           {recentDeleted.length===0
             ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun task eliminato di recente.</div>
             : recentDeleted.map(task=>(
@@ -837,10 +840,51 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
   );
 }
 
+// ── Habit Stats (14-day aggregate) ───────────────────────────────────────────
+function HabitStats({ habitCfg, habitLog, onClose }) {
+  const oggi = new Date();
+  const days = Array.from({length:14},(_,i)=>{
+    const d=new Date(oggi.getTime()-(13-i)*86400000);
+    const key=d.toDateString(), log=habitLog[key]||{};
+    const total=habitCfg.length;
+    const logged=habitCfg.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
+    return{key,d,label:d.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,1).toUpperCase(),pct:total?logged/total:0,logged,total,isOggi:d.toDateString()===oggi.toDateString()};
+  });
+  const avgPct=days.filter(d=>d.total>0).reduce((a,d)=>a+d.pct,0)/Math.max(1,days.filter(d=>d.total>0).length);
+  const streak=(()=>{let s=0;for(let i=13;i>=0;i--){if(days[i].pct===1)s++;else break;}return s;})();
+  return (
+    <div style={{background:"var(--bg-wash)",borderRadius:12,padding:"14px",marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>📊 Storico 14 giorni</div>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:16,color:"var(--text-sub)",cursor:"pointer",padding:"0 2px"}}>✕</button>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
+        {[{v:streak,l:"streak"},{v:`${Math.round(avgPct*100)}%`,l:"media 14gg"},{v:days.filter(d=>d.pct===1).length,l:"complete"}].map(({v,l})=>(
+          <div key={l} style={{background:"var(--bg-card)",borderRadius:8,padding:"6px 10px",border:"0.5px solid var(--border-ter)",flex:1,textAlign:"center"}}>
+            <div style={{fontSize:16,fontWeight:700,color:"var(--text)"}}>{v}</div>
+            <div style={{fontSize:10,color:"var(--text-sub)"}}>{l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:3,alignItems:"flex-end",padding:"4px 0"}}>
+        {days.map(({key,label,pct,isOggi})=>(
+          <div key={key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+            <div style={{height:40,display:"flex",alignItems:"flex-end",width:"100%"}}>
+              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"#4a7c59":pct>0?"#4a7c5966":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
+            </div>
+            <div style={{fontSize:8,color:isOggi?"#4a7c59":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Habit Tracker ─────────────────────────────────────────────────────────────
-function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setView, habitDeleted, setHabitDeleted, dark }) {
+function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setView, setImpTab, habitDeleted, setHabitDeleted, dark }) {
   const oggi=new Date(), todayKey=oggi.toDateString(), log=habitLog[todayKey]||{};
   const [chartHabit, setChartHabit] = useState(null);
+  const [showStats, setShowStats] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const recentDeleted = cleanOld(habitDeleted);
 
@@ -878,14 +922,14 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>📊 Habit Tracker</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label="⚙ Impostazioni" onClick={()=>{setView("impostazioni");close();}}/>
-            <DotsItem label={`🗑 Recenti${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep/>
+            <DotsItem label="⚙ Impostazioni Habit" onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
+            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
       </div>
 
-      {/* Recap card */}
-      <div style={{background:"var(--bg-card)",borderRadius:12,padding:"12px 14px",marginBottom:12,border:"0.5px solid var(--border-ter)"}}>
+      {/* Recap card — tappable for 14-day stats */}
+      <div onClick={()=>setShowStats(s=>!s)} style={{background:"var(--bg-card)",borderRadius:12,padding:"12px 14px",marginBottom:showStats?8:12,border:"0.5px solid var(--border-ter)",cursor:"pointer",userSelect:"none"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:11,color:"var(--text-sec)"}}>
             {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
@@ -896,7 +940,9 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
         <div style={{marginTop:8,height:5,borderRadius:2.5,background:"var(--bg-gray2)",overflow:"hidden"}}>
           <div style={{height:"100%",borderRadius:2.5,background:"#4a7c59",width:`${pctLogged}%`,transition:"width 0.4s"}}/>
         </div>
+        <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
       </div>
+      {showStats && <HabitStats habitCfg={habitCfg} habitLog={habitLog} onClose={()=>setShowStats(false)}/>}
 
       {habitCfg.map(habit=>{
         const val=log[habit.id]??"", numVal=parseFloat(val)||0;
@@ -946,6 +992,9 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
       {showDeleted && (
         <ModalBox onClose={()=>setShowDeleted(false)} dark={dark} zIndex={400}>
           <ModalHeader title="🗑 Habit eliminati di recente" onClose={()=>setShowDeleted(false)}/>
+          <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
+            ⚠️ Conservati per <strong>30 giorni</strong>, poi rimossi definitivamente
+          </div>
           {recentDeleted.length===0
             ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun habit eliminato di recente.</div>
             : recentDeleted.map(habit=>(
@@ -1011,8 +1060,8 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>✅ To-Do</div>
         <DotsMenu render={close=>(
           <>
-            {activeId && <DotsItem label="✕ Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
-            <DotsItem label={`🗑 Recenti${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
+            {activeId && <DotsItem label="🗑 Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
+            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
           </>
         )}/>
       </div>
@@ -1071,6 +1120,9 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
       {showDeleted && (
         <ModalBox onClose={()=>setShowDeleted(false)} dark={dark} zIndex={400}>
           <ModalHeader title="🗑 Liste eliminate di recente" onClose={()=>setShowDeleted(false)}/>
+          <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
+            ⚠️ Conservate per <strong>30 giorni</strong>, poi rimosse definitivamente
+          </div>
           {recentDeleted.length===0
             ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessuna lista eliminata di recente.</div>
             : recentDeleted.map(lst=>(
@@ -1090,10 +1142,18 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
 }
 
 // ── Impostazioni ──────────────────────────────────────────────────────────────
-function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted }) {
-  const [section,setSection]=useState("generale");
-  const [newTask,setNewTask]=useState(""), [newTaskDur,setNewTaskDur]=useState(5);
-  const [newHabit,setNewHabit]=useState(""), [newHabitUnit,setNewHabitUnit]=useState("");
+function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, defaultSection="calendario" }) {
+  const dark = cfg.darkMode || false;
+  const [section, setSection] = useState(defaultSection);
+  const [newTask, setNewTask] = useState(""), [newTaskDur, setNewTaskDur] = useState(5), [newTaskTipo, setNewTaskTipo] = useState("tempo");
+  const [newHabit, setNewHabit] = useState(""), [newHabitUnit, setNewHabitUnit] = useState("");
+  const [editingTask, setEditingTask] = useState(null), [editLabel, setEditLabel] = useState(""), [editDur, setEditDur] = useState(0), [editTipo, setEditTipo] = useState("tempo");
+  const [editingHabit, setEditingHabit] = useState(null), [editHLabel, setEditHLabel] = useState(""), [editHUnit, setEditHUnit] = useState("");
+  const [showRDel, setShowRDel] = useState(false), [showHDel, setShowHDel] = useState(false);
+  const recentRDel = cleanOld(routineDeleted), recentHDel = cleanOld(habitDeleted);
+
+  // keep section in sync when navigating from DotsMenu
+  useEffect(() => { setSection(defaultSection); }, [defaultSection]);
 
   function requestNotifPermission(enable) {
     if (!enable) { setCfg(c=>({...c,reminderEnabled:false})); return; }
@@ -1104,35 +1164,62 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
     });
   }
 
+  const TipoToggle = ({value, onChange}) => (
+    <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:"0.5px solid var(--border-sec)",flexShrink:0}}>
+      {[["tempo","⏱ min"],["rep","🔄 rip"]].map(([t,l])=>(
+        <div key={t} onClick={()=>onChange(t)} style={{padding:"4px 8px",fontSize:10,cursor:"pointer",background:value===t?"#4a7c59":"transparent",color:value===t?"white":"var(--text-sub)",lineHeight:1.4}}>{l}</div>
+      ))}
+    </div>
+  );
+
+  const DeletedNote = () => (
+    <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
+      ⚠️ Gli elementi eliminati restano in memoria per <strong>30 giorni</strong>, poi vengono rimossi definitivamente.
+    </div>
+  );
+
   return (
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
       <div style={{fontSize:16,fontWeight:600,marginBottom:12,color:"var(--text)"}}>Impostazioni</div>
       <div style={{display:"flex",gap:4,marginBottom:18}}>
-        {[{k:"generale",l:"Generale"},{k:"routine",l:"Routine"},{k:"habit",l:"Habit"}].map(t=>(
+        {[{k:"calendario",l:"Calendario"},{k:"routine",l:"Routine"},{k:"habit",l:"Habit"}].map(t=>(
           <button key={t.k} onClick={()=>setSection(t.k)} style={{flex:1,fontSize:12,padding:"7px 0",background:section===t.k?"#4a7c59":"var(--bg-gray)",color:section===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:section===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
 
-      {section==="generale" && (
+      {section==="calendario" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <Toggle label="Data gregoriana"            on={cfg.showGreg}    onChange={v=>setCfg(c=>({...c,showGreg:v}))}/>
+          {/* calView 3-way selector */}
+          <div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Visualizzazione giorni nel calendario</div>
+            <div style={{display:"flex",gap:4}}>
+              {[{k:"chars",l:"甲子",d:"Caratteri cinesi"},{k:"emoji",l:"🐉 Emoji",d:"Emoji animale"},{k:"nomi",l:"Abc",d:"Nomi latini"}].map(({k,l,d})=>{
+                const active=(cfg.calView||"chars")===k;
+                return (
+                  <div key={k} onClick={()=>setCfg(c=>({...c,calView:k}))} title={d} style={{flex:1,textAlign:"center",padding:"10px 6px",borderRadius:9,cursor:"pointer",
+                    background:active?"#4a7c59":dark?"var(--bg-gray)":"var(--bg-wash)",
+                    color:active?"white":dark?"var(--text-sec)":"var(--text)",
+                    border:`1px solid ${active?"#4a7c59":"var(--border-sec)"}`,
+                    fontSize:13,fontWeight:active?700:400,transition:"all 0.15s"
+                  }}>{l}</div>
+                );
+              })}
+            </div>
+          </div>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          <Toggle label="Caratteri cinesi"           on={cfg.showChinese} onChange={v=>setCfg(c=>({...c,showChinese:v}))}/>
+          <Toggle label="Data gregoriana"            on={cfg.showGreg}    onChange={v=>setCfg(c=>({...c,showGreg:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="Segno zodiacale della Luna" on={cfg.showLunaZod} onChange={v=>setCfg(c=>({...c,showLunaZod:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="Ekadashi"                   on={cfg.showEk}      onChange={v=>setCfg(c=>({...c,showEk:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          {/* Dark mode */}
           <Toggle label="🌙 Tema scuro" on={cfg.darkMode||false} onChange={v=>setCfg(c=>({...c,darkMode:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          {/* Reminder */}
           <Toggle label="🔔 Promemoria routine" on={cfg.reminderEnabled||false} onChange={requestNotifPermission}/>
           {cfg.reminderEnabled && (
             <div style={{display:"flex",alignItems:"center",gap:10,paddingLeft:4}}>
               <span style={{fontSize:12,color:"var(--text-sec)"}}>Orario</span>
-              <input type="time" value={cfg.reminderTime||"07:00"} onChange={e=>setCfg(c=>({...c,reminderTime:e.target.value}))}
-                     style={{fontSize:13,width:110,flex:"none"}}/>
+              <input type="time" value={cfg.reminderTime||"07:00"} onChange={e=>setCfg(c=>({...c,reminderTime:e.target.value}))} style={{fontSize:13,width:110,flex:"none"}}/>
               <span style={{fontSize:11,color:"var(--text-sub)"}}>ogni giorno</span>
             </div>
           )}
@@ -1144,8 +1231,21 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Gestisci i task della Morning Routine.</div>
           {routineCfg.map(task=>{
             const tipo=task.tipo||"tempo";
+            if (editingTask===task.id) return (
+              <div key={task.id} style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:6}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+                  <input autoFocus value={editLabel} onChange={e=>setEditLabel(e.target.value)} style={{flex:1,minWidth:100,fontSize:12}}/>
+                  <input type="number" value={editDur} onChange={e=>setEditDur(+e.target.value)} min={0} style={{width:52,fontSize:12}}/>
+                  <TipoToggle value={editTipo} onChange={setEditTipo}/>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>{setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,label:editLabel.trim()||t.label,durata:editDur,tipo:editTipo}:t));setEditingTask(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>setEditingTask(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
+                </div>
+              </div>
+            );
             return (
-              <div key={task.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+              <div key={task.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div onClick={()=>setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,attiva:!t.attiva}:t))}
                      style={{width:20,height:20,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:task.attiva?"#4a7c59":"transparent",border:`2px solid ${task.attiva?"#4a7c59":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
                   {task.attiva && <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>}
@@ -1154,30 +1254,27 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <div style={{fontSize:13,fontWeight:500,color:task.attiva?"var(--text)":"var(--text-sub)"}}>{task.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?"rip.":"min"}</div>
                 </div>
-                {/* tipo toggle */}
-                <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:"0.5px solid var(--border-sec)",flexShrink:0}}>
-                  {[["tempo","⏱"],["rep","🔄"]].map(([t,ico])=>(
-                    <div key={t} onClick={()=>setRoutineCfg(prev=>prev.map(tk=>tk.id===task.id?{...tk,tipo:t}:tk))}
-                         style={{padding:"3px 7px",fontSize:11,cursor:"pointer",background:tipo===t?"#4a7c59":"transparent",color:tipo===t?"white":"var(--text-sub)"}}>{ico}</div>
-                  ))}
-                </div>
-                <button onClick={()=>{
-                  setRoutineDeleted(prev=>[...cleanOld(prev),{...task,deletedAt:Date.now()}]);
-                  setRoutineCfg(prev=>prev.filter(t=>t.id!==task.id));
-                }} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 4px",lineHeight:1}}>×</button>
+                <TipoToggle value={tipo} onChange={v=>setRoutineCfg(prev=>prev.map(tk=>tk.id===task.id?{...tk,tipo:v}:tk))}/>
+                <button onClick={()=>{setEditingTask(task.id);setEditLabel(task.label);setEditDur(task.durata);setEditTipo(tipo);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
+                <button onClick={()=>{setRoutineDeleted(prev=>[...cleanOld(prev),{...task,deletedAt:Date.now()}]);setRoutineCfg(prev=>prev.filter(t=>t.id!==task.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
               </div>
             );
           })}
+          {/* Add task form */}
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
             <div style={{fontSize:12,fontWeight:600,color:"#4a7c59",marginBottom:8}}>+ Aggiungi task</div>
             <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
               <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&document.getElementById("btn-add-task")?.click()} placeholder="Nome task" style={{flex:1,minWidth:100,fontSize:12}}/>
-              <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                <input type="number" value={newTaskDur} onChange={e=>setNewTaskDur(+e.target.value)} min={1} style={{width:52,fontSize:12}}/>
-                <span style={{fontSize:11,color:"var(--text-sec)"}}>min</span>
-                <button id="btn-add-task" onClick={()=>{if(!newTask.trim())return;setRoutineCfg(prev=>[...prev,{id:Date.now().toString(),label:newTask.trim(),durata:newTaskDur,tipo:newTaskDur>0?"tempo":"rep",attiva:true}]);setNewTask("");}} style={{padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
-              </div>
+              <input type="number" value={newTaskDur} onChange={e=>setNewTaskDur(+e.target.value)} min={0} style={{width:52,fontSize:12}}/>
+              <TipoToggle value={newTaskTipo} onChange={setNewTaskTipo}/>
+              <button id="btn-add-task" onClick={()=>{if(!newTask.trim())return;setRoutineCfg(prev=>[...prev,{id:Date.now().toString(),label:newTask.trim(),durata:newTaskDur,tipo:newTaskTipo,attiva:true}]);setNewTask("");setNewTaskDur(5);setNewTaskTipo("tempo");}} style={{padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
             </div>
+          </div>
+          {/* Link to recently deleted */}
+          <div style={{marginTop:14,paddingTop:12,borderTop:"0.5px solid var(--border-ter)",textAlign:"center"}}>
+            <button onClick={()=>setShowRDel(true)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#e53e3e",padding:"4px 8px"}}>
+              🗑 Eliminate di recente{recentRDel.length>0?` (${recentRDel.length})`:""}
+            </button>
           </div>
         </div>
       )}
@@ -1185,18 +1282,30 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
       {section==="habit" && (
         <div>
           <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Definisci i tuoi habit quotidiani da monitorare.</div>
-          {habitCfg.map(habit=>(
-            <div key={habit.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{habit.label}</div>
-                <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.tipo}{habit.unita?` · ${habit.unita}`:""}</div>
+          {habitCfg.map(habit=>{
+            if (editingHabit===habit.id) return (
+              <div key={habit.id} style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:6}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
+                  <input autoFocus value={editHLabel} onChange={e=>setEditHLabel(e.target.value)} placeholder="Nome" style={{flex:1,minWidth:100,fontSize:12}}/>
+                  <input value={editHUnit} onChange={e=>setEditHUnit(e.target.value)} placeholder="Unità" style={{width:70,fontSize:12}}/>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim()}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>setEditingHabit(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
+                </div>
               </div>
-              <button onClick={()=>{
-                setHabitDeleted(prev=>[...cleanOld(prev),{...habit,deletedAt:Date.now()}]);
-                setHabitCfg(prev=>prev.filter(h=>h.id!==habit.id));
-              }} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 4px",lineHeight:1}}>×</button>
-            </div>
-          ))}
+            );
+            return (
+              <div key={habit.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{habit.label}</div>
+                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"}</div>
+                </div>
+                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
+                <button onClick={()=>{setHabitDeleted(prev=>[...cleanOld(prev),{...habit,deletedAt:Date.now()}]);setHabitCfg(prev=>prev.filter(h=>h.id!==habit.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
+              </div>
+            );
+          })}
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
             <div style={{fontSize:12,fontWeight:600,color:"#4a7c59",marginBottom:8}}>+ Aggiungi habit</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -1205,7 +1314,53 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               <button onClick={()=>{if(!newHabit.trim())return;setHabitCfg(prev=>[...prev,{id:Date.now().toString(),label:newHabit.trim(),tipo:"numero",unita:newHabitUnit.trim()}]);setNewHabit("");setNewHabitUnit("");}} style={{padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
             </div>
           </div>
+          {/* Link to recently deleted */}
+          <div style={{marginTop:14,paddingTop:12,borderTop:"0.5px solid var(--border-ter)",textAlign:"center"}}>
+            <button onClick={()=>setShowHDel(true)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#e53e3e",padding:"4px 8px"}}>
+              🗑 Eliminate di recente{recentHDel.length>0?` (${recentHDel.length})`:""}
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Routine deleted modal */}
+      {showRDel && (
+        <ModalBox onClose={()=>setShowRDel(false)} dark={dark} zIndex={400}>
+          <ModalHeader title="🗑 Task eliminati di recente" onClose={()=>setShowRDel(false)}/>
+          <DeletedNote/>
+          {recentRDel.length===0
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun task eliminato di recente.</div>
+            : recentRDel.map(task=>(
+              <div key={task.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:"var(--text)"}}>{task.label}</div>
+                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?"rip.":"min"} · {formatDaysAgo(task.deletedAt)}</div>
+                </div>
+                <button onClick={()=>{const{deletedAt,...c}=task;setRoutineCfg(prev=>[...prev,c]);setRoutineDeleted(prev=>prev.filter(t=>t.id!==task.id));setShowRDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+              </div>
+            ))
+          }
+        </ModalBox>
+      )}
+
+      {/* Habit deleted modal */}
+      {showHDel && (
+        <ModalBox onClose={()=>setShowHDel(false)} dark={dark} zIndex={400}>
+          <ModalHeader title="🗑 Habit eliminati di recente" onClose={()=>setShowHDel(false)}/>
+          <DeletedNote/>
+          {recentHDel.length===0
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun habit eliminato di recente.</div>
+            : recentHDel.map(habit=>(
+              <div key={habit.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:"var(--text)"}}>{habit.label}</div>
+                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"} · {formatDaysAgo(habit.deletedAt)}</div>
+                </div>
+                <button onClick={()=>{const{deletedAt,...c}=habit;setHabitCfg(prev=>[...prev,c]);setHabitDeleted(prev=>prev.filter(h=>h.id!==habit.id));setShowHDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+              </div>
+            ))
+          }
+        </ModalBox>
       )}
     </div>
   );
@@ -1226,6 +1381,7 @@ export default function App() {
   const [infoModal, setInfoModal] = useState(false);
   const [moonBodyModal, setMoonBodyModal] = useState(false);
   const [moonTap, setMoonTap] = useState(false);
+  const [impTab, setImpTab] = useState("calendario");
 
   const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,darkMode:false,reminderEnabled:false,reminderTime:"07:00",calView:"chars"});
   const [note, setNote]             = useLS("bazi_note",         {});
@@ -1314,19 +1470,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* calView slider */}
-            <div style={{display:"flex",justifyContent:"center",marginBottom:10}}>
-              <div style={{display:"inline-flex",background:"var(--bg-gray)",borderRadius:10,padding:2,gap:1}}>
-                {[{k:"emoji",l:"🐉 Emoji"},{k:"chars",l:"甲子"},{k:"nomi",l:"Abc"}].map(({k,l})=>(
-                  <div key={k} onClick={()=>setCfg(c=>({...c,calView:k}))} style={{padding:"5px 12px",borderRadius:8,fontSize:11,cursor:"pointer",fontWeight:500,
-                    background:(cfg.calView||"chars")===k?"var(--bg)":"transparent",
-                    color:(cfg.calView||"chars")===k?"var(--text)":"var(--text-sub)",
-                    boxShadow:(cfg.calView||"chars")===k?"0 1px 4px rgba(0,0,0,0.12)":"none",transition:"all 0.15s"
-                  }}>{l}</div>
-                ))}
-              </div>
-            </div>
-
             {/* Legenda elementi */}
             <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
               {Object.entries(ELEMENTI).map(([k,e])=>(
@@ -1371,7 +1514,7 @@ export default function App() {
                   return (
                     <div key={ci} onClick={()=>selectDay(d,bazi)} style={{
                       background:isSel?e.colore:elbg(el,dark),
-                      border:isOggi?`2px solid ${e.colore}`:`0.5px solid ${e.colore}44`,
+                      border:isOggi?`2px solid ${e.colore}`:`1px solid ${e.colore}88`,
                       borderRadius:7,cursor:"pointer",textAlign:"center",
                       height:76,display:"flex",flexDirection:"column",
                       padding:"2px 1px",boxSizing:"border-box",transition:"background 0.15s",
@@ -1429,7 +1572,7 @@ export default function App() {
               const dayRoutineLog=routineLog[selDay.date.toDateString()]||{};
               const activeTasks=routineCfg.filter(t=>t.attiva);
               return (
-                <div style={{marginTop:12,padding:14,background:elbg(el,dark),borderRadius:12,border:`0.5px solid ${ELEMENTI[el].colore}33`}}>
+                <div style={{marginTop:12,padding:14,background:elbg(el,dark),borderRadius:12,border:`1px solid ${ELEMENTI[el].colore}66`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                     <div>
                       <div style={{fontSize:14,fontWeight:600,textTransform:"capitalize",color:"var(--text)"}}>
@@ -1515,11 +1658,11 @@ export default function App() {
           </div>
         )}
 
-        {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
-        {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
+        {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} setImpTab={setImpTab} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
+        {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} setImpTab={setImpTab} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
         {view==="bazi"         && <BaziView dark={dark}/>}
-        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted}/>}
+        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} defaultSection={impTab}/>}
       </div>
 
       {/* Modals */}
