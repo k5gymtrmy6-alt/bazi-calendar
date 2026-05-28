@@ -441,38 +441,57 @@ function AnnoModal({ anno, byYear, onClose, dark }) {
   );
 }
 
-// ── Promemoria Section (Calendar) ─────────────────────────────────────────────
+// ── Promemoria Section (Calendar day panel) ───────────────────────────────────
 function PromemoriaSection({ promemoria, dateKey, setPromemoria, dark }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newText, setNewText] = useState("");
   const [newEl, setNewEl] = useState("fuoco");
   const dayProm = promemoria[dateKey] || [];
+  const pending = dayProm.filter(p => p.fatto !== true);
+  const done    = dayProm.filter(p => p.fatto === true);
 
   function addProm() {
     if (!newText.trim()) return;
-    const p = { id: Date.now().toString(), testo: newText.trim(), elemento: newEl };
+    const p = { id: Date.now().toString(), testo: newText.trim(), elemento: newEl, fatto: false };
     setPromemoria(prev => ({ ...prev, [dateKey]: [...(prev[dateKey] || []), p] }));
     setNewText(""); setShowAdd(false);
+  }
+  function toggleFatto(id) {
+    setPromemoria(prev => ({ ...prev, [dateKey]: (prev[dateKey]||[]).map(p => p.id===id ? {...p, fatto:!p.fatto} : p) }));
   }
   function deleteProm(id) {
     setPromemoria(prev => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter(p => p.id !== id) }));
   }
 
   return (
-    <div style={{marginBottom:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>🔔 Promemoria</div>
-        <button onClick={()=>setShowAdd(s=>!s)} style={{
-          fontSize:11,padding:"3px 10px",background:showAdd?"var(--bg-gray)":"var(--accent)",
-          color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:10,cursor:"pointer",fontWeight:500
-        }}>{showAdd ? "✕ Annulla" : "+ Aggiungi"}</button>
+    <div style={{marginBottom:10}}>
+      {/* Centered box header */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+        <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"3px 12px",borderRadius:12,border:"0.5px solid var(--border-sec)",background:"var(--bg-card)",whiteSpace:"nowrap"}}>
+          <span style={{fontSize:11,fontWeight:600,color:"var(--text-sec)"}}>🔔 Promemoria</span>
+          <button onClick={()=>setShowAdd(s=>!s)} style={{fontSize:11,padding:"1px 8px",background:showAdd?"var(--bg-gray)":"var(--accent)",color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,lineHeight:1.7}}>{showAdd?"✕":"+"}</button>
+        </div>
+        <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
       </div>
-      {dayProm.map(p => {
+      {pending.map(p => {
         const e = ELEMENTI[p.elemento] || ELEMENTI.fuoco;
         return (
           <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:elbg(p.elemento,dark),borderRadius:8,marginBottom:4,border:`0.5px solid ${e.colore}44`}}>
-            <div style={{width:8,height:8,borderRadius:2,background:e.colore,flexShrink:0}}/>
+            <div onClick={()=>toggleFatto(p.id)} style={{width:18,height:18,borderRadius:"50%",flexShrink:0,cursor:"pointer",border:`2px solid ${e.colore}`,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}/>
             <span style={{flex:1,fontSize:12,color:"var(--text)"}}>{p.testo}</span>
+            <button onClick={()=>deleteProm(p.id)} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 2px",lineHeight:1,flexShrink:0}}>×</button>
+          </div>
+        );
+      })}
+      {done.map(p => {
+        const e = ELEMENTI[p.elemento] || ELEMENTI.fuoco;
+        return (
+          <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"var(--bg-card)",borderRadius:8,marginBottom:3,border:"0.5px solid var(--border-ter)",opacity:0.55}}>
+            <div onClick={()=>toggleFatto(p.id)} style={{width:18,height:18,borderRadius:"50%",flexShrink:0,cursor:"pointer",border:`2px solid ${e.colore}`,background:e.colore,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{color:"white",fontSize:10,lineHeight:1}}>✓</span>
+            </div>
+            <span style={{flex:1,fontSize:12,color:"var(--text-sub)",textDecoration:"line-through"}}>{p.testo}</span>
             <button onClick={()=>deleteProm(p.id)} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 2px",lineHeight:1,flexShrink:0}}>×</button>
           </div>
         );
@@ -525,12 +544,14 @@ function EventsSection({ events, dateKey, setEvents, dark }) {
 
   return (
     <div style={{marginBottom:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>📅 Eventi</div>
-        <button onClick={()=>setShowAdd(s=>!s)} style={{
-          fontSize:11,padding:"3px 10px",background:showAdd?"var(--bg-gray)":"var(--accent)",
-          color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:10,cursor:"pointer",fontWeight:500
-        }}>{showAdd ? "✕ Annulla" : "+ Aggiungi"}</button>
+      {/* Centered box header */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+        <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"3px 12px",borderRadius:12,border:"0.5px solid var(--border-sec)",background:"var(--bg-card)",whiteSpace:"nowrap"}}>
+          <span style={{fontSize:11,fontWeight:600,color:"var(--text-sec)"}}>📅 Eventi</span>
+          <button onClick={()=>setShowAdd(s=>!s)} style={{fontSize:11,padding:"1px 8px",background:showAdd?"var(--bg-gray)":"var(--accent)",color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,lineHeight:1.7}}>{showAdd?"✕":"+"}</button>
+        </div>
+        <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
       </div>
       {dayEvents.map(ev => {
         const e = ELEMENTI[ev.elemento] || ELEMENTI.legno;
@@ -709,7 +730,7 @@ function HabitChart({ habitId, habitLog }) {
 
 // ── Top Navigation ────────────────────────────────────────────────────────────
 function TopNav({ view, setView }) {
-  const isUtility = ["routine","habit","todo"].includes(view);
+  const isUtility = ["routine","habit","todo","memo"].includes(view);
   return (
     <div style={{borderBottom:"0.5px solid var(--border-ter)",position:"sticky",top:0,background:"var(--bg)",zIndex:50}}>
       <div style={{display:"flex",maxWidth:480,margin:"0 auto"}}>
@@ -734,16 +755,16 @@ function TopNav({ view, setView }) {
       </div>
       {isUtility && (
         <div style={{display:"flex",padding:"6px 10px",background:"var(--bg-card)",borderBottom:"0.5px solid var(--border-ter)",maxWidth:480,margin:"0 auto",gap:6}}>
-          {[{k:"routine",l:"Routine",ico:"🌅"},{k:"habit",l:"Habit",ico:"📊"},{k:"todo",l:"To-Do",ico:"✅"}].map(({k,l,ico})=>(
+          {[{k:"routine",l:"Routine",ico:"🌅"},{k:"habit",l:"Habit",ico:"📊"},{k:"todo",l:"To-Do",ico:"✅"},{k:"memo",l:"Memo",ico:"🔔"}].map(({k,l,ico})=>(
             <button key={k} onClick={()=>setView(k)} style={{
               flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
-              padding:"8px 4px",borderRadius:12,border:"none",cursor:"pointer",
+              padding:"6px 2px",borderRadius:12,border:"none",cursor:"pointer",
               background:view===k?"var(--accent)":"transparent",
               color:view===k?"white":"var(--text-ter)",
               fontWeight:view===k?600:400,transition:"background 0.15s",
             }}>
-              <span style={{fontSize:20,lineHeight:1}}>{ico}</span>
-              <span style={{fontSize:11,lineHeight:1}}>{l}</span>
+              <span style={{fontSize:18,lineHeight:1}}>{ico}</span>
+              <span style={{fontSize:10,lineHeight:1}}>{l}</span>
             </button>
           ))}
         </div>
@@ -786,6 +807,15 @@ function InfoTabContent({ dark }) {
 
   return (
     <div>
+      {/* Explanatory intro */}
+      <div style={{marginBottom:14,padding:"10px 12px",background:"var(--bg-card)",borderRadius:10,border:"0.5px solid var(--border-ter)"}}>
+        <div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:6,letterSpacing:0.3}}>天干 · 地支</div>
+        <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.75}}>
+          I <strong style={{color:"var(--text)"}}>10 Tronchi Celesti (天干)</strong> esprimono i cinque elementi in polarità Yang e Yin — l'energia del Cielo che scorre nel tempo.<br/>
+          I <strong style={{color:"var(--text)"}}>12 Rami Terrestri (地支)</strong> corrispondono agli animali zodiacali e alle dodici ore del giorno — la risposta della Terra.<br/>
+          Combinati formano il ciclo sessagesimale di <strong style={{color:"var(--text)"}}>60 coppie</strong> che si ripete ogni 60 anni.
+        </div>
+      </div>
       <div style={{display:"flex",gap:4,marginBottom:14}}>
         {[{k:"tronchi",l:"10 Tronchi 天干"},{k:"rami",l:"12 Rami 地支"}].map(t=>(
           <button key={t.k} onClick={()=>setSubtab(t.k)} style={{flex:1,fontSize:11,padding:"6px 0",background:subtab===t.k?"var(--accent)":"var(--bg-gray)",color:subtab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:6,cursor:"pointer",fontWeight:subtab===t.k?600:400}}>{t.l}</button>
@@ -798,10 +828,11 @@ function InfoTabContent({ dark }) {
             {TRONCHI.map((t,i)=>{
               const el=ELEMENTI[TRONCO_EL[i]];
               return (
-                <div key={i} onClick={()=>setSubIdx(i)} style={{background:elbg(TRONCO_EL[i],dark),borderRadius:8,padding:"7px 10px",display:"flex",gap:8,alignItems:"center",border:`0.5px solid ${el.colore}33`,cursor:"pointer"}}>
-                  <span style={{fontSize:22,lineHeight:1}}>{t}</span>
+                <div key={i} onClick={()=>setSubIdx(i)} style={{background:elbg(TRONCO_EL[i],dark),borderRadius:8,padding:"7px 10px",display:"flex",gap:6,alignItems:"center",border:`0.5px solid ${el.colore}33`,cursor:"pointer"}}>
+                  <span style={{fontSize:17,lineHeight:1}}>{TRONCHI_EMOJI[i]}</span>
+                  <span style={{fontSize:19,lineHeight:1,color:dark?"rgba(255,255,255,0.9)":el.colore,fontWeight:500}}>{t}</span>
                   <div>
-                    <div style={{fontSize:11,fontWeight:600,color:el.colore}}>{TRONCHI_NOMI[i]}</div>
+                    <div style={{fontSize:10,fontWeight:600,color:el.colore}}>{TRONCHI_NOMI[i]}</div>
                     <div style={{fontSize:9,color:"var(--text-sec)"}}>{el.nome} {i%2===0?"Yang":"Yin"}</div>
                   </div>
                 </div>
@@ -1648,6 +1679,151 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
   );
 }
 
+// ── Promemoria Utility View ───────────────────────────────────────────────────
+function PromemoriaMemoView({ promemoria, setPromemoria, dark }) {
+  const oggi = new Date();
+  const todayStr = oggi.toISOString().split("T")[0];
+  const [showAdd, setShowAdd] = useState(false);
+  const [newText, setNewText] = useState("");
+  const [newEl, setNewEl] = useState("fuoco");
+  const [newDate, setNewDate] = useState(todayStr);
+  const [showDone, setShowDone] = useState(false);
+
+  const allItems = Object.entries(promemoria).flatMap(([dk,items])=>
+    (items||[]).map(p=>({...p, dateKey:dk, dateObj:new Date(dk)}))
+  );
+  const pending = allItems.filter(p=>p.fatto!==true).sort((a,b)=>a.dateObj-b.dateObj);
+  const done    = allItems.filter(p=>p.fatto===true).sort((a,b)=>b.dateObj-a.dateObj);
+
+  const grouped = {};
+  pending.forEach(p=>{ if(!grouped[p.dateKey])grouped[p.dateKey]=[]; grouped[p.dateKey].push(p); });
+
+  function dateLabel(dateKey) {
+    const d = new Date(dateKey);
+    const today0 = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+    const diff = Math.round((d - today0) / 86400000);
+    if (diff===0) return "Oggi";
+    if (diff===1) return "Domani";
+    if (diff===-1) return "Ieri";
+    return d.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"long"});
+  }
+  function isPast(dateKey) {
+    const d = new Date(dateKey);
+    const today0 = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+    return d < today0;
+  }
+
+  function toggleFatto(dateKey, id) {
+    setPromemoria(prev=>({...prev,[dateKey]:(prev[dateKey]||[]).map(p=>p.id===id?{...p,fatto:!p.fatto}:p)}));
+  }
+  function deleteProm(dateKey, id) {
+    setPromemoria(prev=>({...prev,[dateKey]:(prev[dateKey]||[]).filter(p=>p.id!==id)}));
+  }
+  function addProm() {
+    if (!newText.trim()) return;
+    const d = new Date(newDate+"T12:00:00");
+    const dk = d.toDateString();
+    const p = {id:Date.now().toString(), testo:newText.trim(), elemento:newEl, fatto:false};
+    setPromemoria(prev=>({...prev,[dk]:[...(prev[dk]||[]),p]}));
+    setNewText(""); setShowAdd(false);
+  }
+
+  return (
+    <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>🔔 Promemoria</div>
+        <button onClick={()=>setShowAdd(s=>!s)} style={{fontSize:11,padding:"5px 12px",background:showAdd?"var(--bg-gray)":"var(--accent)",color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:10,cursor:"pointer",fontWeight:500}}>
+          {showAdd ? "✕ Annulla" : "+ Aggiungi"}
+        </button>
+      </div>
+
+      {showAdd && (
+        <div style={{background:"var(--bg-wash)",borderRadius:12,padding:"14px",border:"0.5px solid var(--border-sec)",marginBottom:16}}>
+          <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} style={{width:"100%",marginBottom:10,fontSize:13}}/>
+          <input autoFocus value={newText} onChange={e=>setNewText(e.target.value)}
+                 onKeyDown={e=>{if(e.key==="Enter")addProm();if(e.key==="Escape")setShowAdd(false);}}
+                 placeholder="Scrivi il promemoria…"
+                 style={{width:"100%",fontSize:13,marginBottom:10,boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+            {Object.entries(ELEMENTI).map(([k,e])=>(
+              <div key={k} onClick={()=>setNewEl(k)} style={{
+                display:"flex",alignItems:"center",gap:3,padding:"4px 9px",borderRadius:12,cursor:"pointer",
+                fontSize:11,fontWeight:newEl===k?600:400,
+                background:newEl===k?e.colore:elbg(k,dark),
+                color:newEl===k?"white":e.colore,
+                border:`0.5px solid ${e.colore}55`
+              }}>{e.char} {e.nome}</div>
+            ))}
+          </div>
+          <button onClick={addProm} style={{width:"100%",padding:"8px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
+            Aggiungi
+          </button>
+        </div>
+      )}
+
+      {Object.keys(grouped).length===0 && !showAdd && (
+        <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"3rem 1rem"}}>
+          Nessun promemoria in sospeso.<br/>
+          <span style={{fontSize:11}}>Aggiungine uno con il tasto + in alto.</span>
+        </div>
+      )}
+
+      {Object.entries(grouped).map(([dk,items])=>{
+        const past = isPast(dk);
+        return (
+          <div key={dk} style={{marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <div style={{flex:1,height:"0.5px",background:past?"var(--border-ter)":"var(--border-sec)"}}/>
+              <span style={{fontSize:11,fontWeight:600,color:past?"var(--text-ter)":"var(--text-sec)",padding:"2px 10px",borderRadius:10,border:`0.5px solid ${past?"var(--border-ter)":"var(--border-sec)"}`,background:"var(--bg-card)",whiteSpace:"nowrap"}}>{dateLabel(dk)}</span>
+              <div style={{flex:1,height:"0.5px",background:past?"var(--border-ter)":"var(--border-sec)"}}/>
+            </div>
+            {items.map(p=>{
+              const e=ELEMENTI[p.elemento]||ELEMENTI.fuoco;
+              return (
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:elbg(p.elemento,dark),borderRadius:10,marginBottom:5,border:`0.5px solid ${e.colore}${past?"22":"44"}`}}>
+                  <div onClick={()=>toggleFatto(dk,p.id)} style={{width:22,height:22,borderRadius:"50%",flexShrink:0,cursor:"pointer",border:`2px solid ${e.colore}`,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:past?"var(--text-sec)":"var(--text)",fontWeight:past?400:500}}>{p.testo}</div>
+                  </div>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:e.colore,flexShrink:0}}/>
+                  <button onClick={()=>deleteProm(dk,p.id)} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 2px",lineHeight:1,flexShrink:0}}>×</button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      {done.length>0 && (
+        <>
+          <div onClick={()=>setShowDone(s=>!s)} style={{display:"flex",alignItems:"center",gap:8,marginTop:8,marginBottom:showDone?8:0,cursor:"pointer"}}>
+            <div style={{flex:1,height:"0.5px",background:"var(--border-ter)"}}/>
+            <span style={{fontSize:10,color:"var(--text-ter)",padding:"2px 10px",borderRadius:10,border:"0.5px solid var(--border-ter)",background:"var(--bg-card)",whiteSpace:"nowrap"}}>
+              ✓ Completati ({done.length}) {showDone?"▲":"▼"}
+            </span>
+            <div style={{flex:1,height:"0.5px",background:"var(--border-ter)"}}/>
+          </div>
+          {showDone && done.map(p=>{
+            const e=ELEMENTI[p.elemento]||ELEMENTI.fuoco;
+            return (
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg-card)",borderRadius:10,marginBottom:4,border:"0.5px solid var(--border-ter)",opacity:0.65}}>
+                <div onClick={()=>toggleFatto(p.dateKey,p.id)} style={{width:22,height:22,borderRadius:"50%",flexShrink:0,cursor:"pointer",border:`2px solid ${e.colore}`,background:e.colore,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:"var(--text-sub)",textDecoration:"line-through"}}>{p.testo}</div>
+                  <div style={{fontSize:10,color:"var(--text-ter)",marginTop:1}}>{dateLabel(p.dateKey)}</div>
+                </div>
+                <button onClick={()=>deleteProm(p.dateKey,p.id)} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 2px",lineHeight:1,flexShrink:0}}>×</button>
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const oggi = new Date();
@@ -1800,7 +1976,7 @@ export default function App() {
                   const dayLog=routineLog[d.toDateString()];
                   const hasRoutine=dayLog&&Object.keys(dayLog).some(k=>dayLog[k]);
                   const dayEvs=events[d.toDateString()]||[];
-                  const dayProm=(promemoria||{})[d.toDateString()]||[];
+                  const dayProm=((promemoria||{})[d.toDateString()]||[]).filter(p=>p.fatto!==true);
                   const txtColor=isSel?"white":(dark?"rgba(255,255,255,0.88)":e.colore);
                   return (
                     <div key={ci} onClick={()=>selectDay(d,bazi)} style={{
@@ -1972,6 +2148,7 @@ export default function App() {
         {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} setImpTab={setImpTab} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
         {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} setImpTab={setImpTab} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
+        {view==="memo"         && <PromemoriaMemoView promemoria={promemoria} setPromemoria={setPromemoria} dark={dark}/>}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
         {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} defaultSection={impTab}/>}
       </div>
