@@ -1,40 +1,80 @@
 :root {
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-mono: 'SF Mono', 'Courier New', monospace;
+
+  /* 5 Elementi */
+  --legno:        #4a7c59;
+  --legno-bg:     #e8f5e9;
+  --fuoco:        #b5451b;
+  --fuoco-bg:     #fde8e0;
+  --terra:        #8b6914;
+  --terra-bg:     #fdf3dc;
+  --metallo:      #6b7280;
+  --metallo-bg:   #f1f1f0;
+  --acqua:        #1a5276;
+  --acqua-bg:     #dceefb;
+
+  /* Neutri caldi */
+  --n900: #1a1a1a;
+  --n700: #3d3d3d;
+  --n500: #5a5a5a;
+  --n400: #9a9690;
+  --n200: #c8c4bc;
+  --n100: #f0ede8;
+  --n50:  #f8f6f2;
+
+  /* Brand */
+  --brand-dark:  #2C3E2D;
+  --brand-green: #4a7c59;
+  --brand-warm:  #f0ede8;
+  --brand-ek:    #2e7d32;
+
+  /* Semantici */
   --bg:          #ffffff;
-  --bg-sec:      #f5f5f3;
-  --bg-card:     #fafafa;
-  --bg-wash:     #f8f8f6;
-  --bg-gray:     #f0f0f0;
-  --bg-gray2:    #e8e8e8;
-  --text:        #111111;
-  --text-sec:    #555555;
-  --text-ter:    #888888;
-  --text-sub:    #aaaaaa;
-  --text-dim:    #cccccc;
-  --border:      #cccccc;
-  --border-sec:  #dddddd;
-  --border-ter:  #eeeeee;
+  --bg-sec:      var(--n50);
+  --bg-card:     #fafaf8;
+  --bg-wash:     var(--n50);
+  --bg-gray:     var(--n100);
+  --bg-gray2:    var(--n200);
+  --text:        var(--n900);
+  --text-sec:    var(--n500);
+  --text-ter:    var(--n400);
+  --text-sub:    var(--n400);
+  --text-dim:    var(--n200);
+  --border:      var(--n200);
+  --border-sec:  #e0dcd4;
+  --border-ter:  var(--n100);
   --input-bg:    #ffffff;
-  --accent:      #4a7c59;
-  --accent-bg:   #f0faf3;
+
+  /* Accent (override via JS) */
+  --accent:        #4a7c59;
+  --accent-bg:     #eef7f1;
   --accent-border: rgba(74,124,89,0.2);
-  --accent-18:   #4a7c5918;
-  --accent-22:   #4a7c5922;
-  --accent-44:   #4a7c5944;
-  --accent-66:   #4a7c5966;
-  --accent-77:   #4a7c5977;
+  --accent-18:     #4a7c5918;
+  --accent-22:     #4a7c5922;
+  --accent-44:     #4a7c5944;
+  --accent-66:     #4a7c5966;
+  --accent-77:     #4a7c5977;
+
+  /* Radius */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-app: 18px;
 }
 
 .dark {
-  --bg:          #111111;
+  --bg:          var(--n900);
   --bg-sec:      #1c1c1e;
   --bg-card:     #1a1a1a;
   --bg-wash:     #161616;
   --bg-gray:     #252525;
   --bg-gray2:    #2e2e2e;
-  --text:        #f0f0f0;
-  --text-sec:    #aaaaaa;
-  --text-ter:    #666666;
+  --text:        var(--n100);
+  --text-sec:    var(--n400);
+  --text-ter:    var(--n500);
   --text-sub:    #444444;
   --text-dim:    #333333;
   --border:      #333333;
@@ -60,16 +100,19 @@ body {
 button {
   font-family: var(--font-sans);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 0.5px solid var(--border-sec);
   background: var(--bg-sec);
   color: var(--text);
+  font-size: 12px;
+  padding: 5px 10px;
+  transition: background 0.15s;
 }
 
 input, select, textarea {
   font-family: var(--font-sans);
   font-size: 13px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 0.5px solid var(--border-sec);
   padding: 6px 8px;
   outline: none;
