@@ -5,7 +5,8 @@ const TRONCHI      = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸
 const RAMI         = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
 const ANIMALI      = ["Ratto","Bue","Tigre","Coniglio","Drago","Serpente","Cavallo","Capra","Scimmia","Gallo","Cane","Maiale"];
 const ANIMALI_EMOJI= ["🐀","🐂","🐯","🐇","🐲","🐍","🐎","🐐","🐒","🐓","🐕","🐖"];
-const TRONCHI_NOMI = ["Jia","Yi","Bing","Ding","Wu","Ji","Geng","Xin","Ren","Gui"];
+const TRONCHI_NOMI  = ["Jia","Yi","Bing","Ding","Wu","Ji","Geng","Xin","Ren","Gui"];
+const TRONCHI_EMOJI = ["🌳","🌿","☀️","🕯️","⛰️","🌾","⚔️","💎","🌊","🌧️"];
 const ZODIAC_NOMI  = ["Ariete","Toro","Gemelli","Cancro","Leone","Vergine","Bilancia","Scorpione","Sagittario","Capricorno","Acquario","Pesci"];
 const ZODIAC_SYM   = ["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
 const MESI_NOMI    = ["Primo","Secondo","Terzo","Quarto","Quinto","Sesto","Settimo","Ottavo","Nono","Decimo","Undicesimo","Dodicesimo","Intercalare"];
@@ -440,6 +441,71 @@ function AnnoModal({ anno, byYear, onClose, dark }) {
   );
 }
 
+// ── Promemoria Section (Calendar) ─────────────────────────────────────────────
+function PromemoriaSection({ promemoria, dateKey, setPromemoria, dark }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newText, setNewText] = useState("");
+  const [newEl, setNewEl] = useState("fuoco");
+  const dayProm = promemoria[dateKey] || [];
+
+  function addProm() {
+    if (!newText.trim()) return;
+    const p = { id: Date.now().toString(), testo: newText.trim(), elemento: newEl };
+    setPromemoria(prev => ({ ...prev, [dateKey]: [...(prev[dateKey] || []), p] }));
+    setNewText(""); setShowAdd(false);
+  }
+  function deleteProm(id) {
+    setPromemoria(prev => ({ ...prev, [dateKey]: (prev[dateKey] || []).filter(p => p.id !== id) }));
+  }
+
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>🔔 Promemoria</div>
+        <button onClick={()=>setShowAdd(s=>!s)} style={{
+          fontSize:11,padding:"3px 10px",background:showAdd?"var(--bg-gray)":"var(--accent)",
+          color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:10,cursor:"pointer",fontWeight:500
+        }}>{showAdd ? "✕ Annulla" : "+ Aggiungi"}</button>
+      </div>
+      {dayProm.map(p => {
+        const e = ELEMENTI[p.elemento] || ELEMENTI.fuoco;
+        return (
+          <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:elbg(p.elemento,dark),borderRadius:8,marginBottom:4,border:`0.5px solid ${e.colore}44`}}>
+            <div style={{width:8,height:8,borderRadius:2,background:e.colore,flexShrink:0}}/>
+            <span style={{flex:1,fontSize:12,color:"var(--text)"}}>{p.testo}</span>
+            <button onClick={()=>deleteProm(p.id)} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 2px",lineHeight:1,flexShrink:0}}>×</button>
+          </div>
+        );
+      })}
+      {dayProm.length===0 && !showAdd && (
+        <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"4px 0"}}>Nessun promemoria</div>
+      )}
+      {showAdd && (
+        <div style={{background:"var(--bg-wash)",borderRadius:10,padding:"12px",border:"0.5px solid var(--border-sec)",marginTop:4}}>
+          <input autoFocus value={newText} onChange={e=>setNewText(e.target.value)}
+                 onKeyDown={e=>{if(e.key==="Enter")addProm();if(e.key==="Escape")setShowAdd(false);}}
+                 placeholder="Promemoria…"
+                 style={{width:"100%",fontSize:13,marginBottom:10,boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>
+            {Object.entries(ELEMENTI).map(([k,e])=>(
+              <div key={k} onClick={()=>setNewEl(k)} style={{
+                display:"flex",alignItems:"center",gap:3,padding:"4px 9px",borderRadius:12,
+                cursor:"pointer",fontSize:11,fontWeight:newEl===k?600:400,
+                background:newEl===k?e.colore:elbg(k,dark),
+                color:newEl===k?"white":e.colore,
+                border:`0.5px solid ${e.colore}55`,transition:"background 0.15s"
+              }}>{e.char} {e.nome}</div>
+            ))}
+          </div>
+          <button onClick={addProm} style={{width:"100%",padding:"8px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
+            Aggiungi promemoria
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Events Section (Calendar) ─────────────────────────────────────────────────
 function EventsSection({ events, dateKey, setEvents, dark }) {
   const [showAdd, setShowAdd] = useState(false);
@@ -710,6 +776,64 @@ function ShichenPicker({ value, onChange, dark }) {
   );
 }
 
+// ── Ba-Zi Informazioni Tab ────────────────────────────────────────────────────
+function InfoTabContent({ dark }) {
+  const [subtab, setSubtab] = useState("tronchi");
+  const [subIdx, setSubIdx] = useState(null);
+
+  if (subIdx !== null && subtab === "tronchi") return <TroncoModal idx={subIdx} onClose={()=>setSubIdx(null)} dark={dark}/>;
+  if (subIdx !== null && subtab === "rami")    return <AnimaleModal idx={subIdx} onClose={()=>setSubIdx(null)} dark={dark}/>;
+
+  return (
+    <div>
+      <div style={{display:"flex",gap:4,marginBottom:14}}>
+        {[{k:"tronchi",l:"10 Tronchi 天干"},{k:"rami",l:"12 Rami 地支"}].map(t=>(
+          <button key={t.k} onClick={()=>setSubtab(t.k)} style={{flex:1,fontSize:11,padding:"6px 0",background:subtab===t.k?"var(--accent)":"var(--bg-gray)",color:subtab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:6,cursor:"pointer",fontWeight:subtab===t.k?600:400}}>{t.l}</button>
+        ))}
+      </div>
+      {subtab==="tronchi" && (
+        <div>
+          <p style={{fontSize:11,marginBottom:8,color:"var(--text-sec)"}}>I <strong>10 Tronchi Celesti</strong> (天干) — tocca per il significato:</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+            {TRONCHI.map((t,i)=>{
+              const el=ELEMENTI[TRONCO_EL[i]];
+              return (
+                <div key={i} onClick={()=>setSubIdx(i)} style={{background:elbg(TRONCO_EL[i],dark),borderRadius:8,padding:"7px 10px",display:"flex",gap:8,alignItems:"center",border:`0.5px solid ${el.colore}33`,cursor:"pointer"}}>
+                  <span style={{fontSize:22,lineHeight:1}}>{t}</span>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:600,color:el.colore}}>{TRONCHI_NOMI[i]}</div>
+                    <div style={{fontSize:9,color:"var(--text-sec)"}}>{el.nome} {i%2===0?"Yang":"Yin"}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {subtab==="rami" && (
+        <div>
+          <p style={{fontSize:11,marginBottom:8,color:"var(--text-sec)"}}>I <strong>12 Rami Terrestri</strong> (地支) — tocca un animale:</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+            {RAMI.map((r,i)=>{
+              const el=ELEMENTI[RAMO_EL[i]];
+              return (
+                <div key={i} onClick={()=>setSubIdx(i)} style={{background:elbg(RAMO_EL[i],dark),borderRadius:8,padding:"7px 10px",display:"flex",gap:8,alignItems:"center",border:`0.5px solid ${el.colore}33`,cursor:"pointer"}}>
+                  <span style={{fontSize:18,lineHeight:1}}>{r}</span>
+                  <span style={{fontSize:16,lineHeight:1}}>{ANIMALI_EMOJI[i]}</span>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:600,color:el.colore}}>{ANIMALI[i]}</div>
+                    <div style={{fontSize:9,color:"var(--text-sec)"}}>{el.nome}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Ba-Zi Calculator ──────────────────────────────────────────────────────────
 function BaziView({ dark, baziPersonal, setBaziPersonal }) {
   const [tab, setTab] = useState("calcola");
@@ -735,8 +859,8 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
       {/* Tab bar */}
       <div style={{display:"flex",gap:4,marginBottom:16}}>
-        {[{k:"calcola",l:"☯ Ba-Zi"},{k:"info",l:"ℹ️ Guida"}].map(t=>(
-          <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,fontSize:12,padding:"7px 0",background:tab===t.k?"var(--accent)":"var(--bg-gray)",color:tab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:tab===t.k?600:400}}>{t.l}</button>
+        {[{k:"calcola",l:"☯ Ba-Zi"},{k:"info",l:"📖 Guida"},{k:"informazioni",l:"🗂 Info"}].map(t=>(
+          <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,fontSize:11,padding:"7px 2px",background:tab===t.k?"var(--accent)":"var(--bg-gray)",color:tab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:tab===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
 
@@ -781,6 +905,8 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
           )}
         </>
       )}
+
+      {tab==="informazioni" && <InfoTabContent dark={dark}/>}
 
       {tab==="info" && (
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -977,6 +1103,7 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
   const [showStats, setShowStats] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const recentDeleted = cleanOld(habitDeleted);
+  const dayEl = TRONCO_EL[baziDay(oggi).tronco], eDayEl = ELEMENTI[dayEl];
 
   // Only active habits shown in tracker
   const activeHabits = habitCfg.filter(h=>h.attiva!==false);
@@ -1022,16 +1149,16 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
       </div>
 
       {/* Recap card — tappable for 14-day stats */}
-      <div onClick={()=>setShowStats(s=>!s)} style={{background:"var(--bg-card)",borderRadius:12,padding:"12px 14px",marginBottom:showStats?8:12,border:"0.5px solid var(--border-ter)",cursor:"pointer",userSelect:"none"}}>
+      <div onClick={()=>setShowStats(s=>!s)} style={{background:elbg(dayEl,dark),borderRadius:12,padding:"12px 14px",marginBottom:showStats?8:12,border:`0.5px solid ${eDayEl.colore}33`,cursor:"pointer",userSelect:"none"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:11,color:"var(--text-sec)"}}>
             {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
-            {" — "}{logged}/{habitCfg.length} registrati
+            {" — "}{logged}/{activeHabits.length} registrati
           </div>
-          <div style={{fontSize:11,color:"var(--accent)",background:"var(--accent-18)",borderRadius:6,padding:"3px 7px",fontWeight:500}}>{pctLogged}%</div>
+          <div style={{fontSize:11,color:eDayEl.colore,background:`${eDayEl.colore}18`,borderRadius:6,padding:"3px 7px",fontWeight:500}}>{pctLogged}%</div>
         </div>
-        <div style={{marginTop:8,height:5,borderRadius:2.5,background:"var(--bg-gray2)",overflow:"hidden"}}>
-          <div style={{height:"100%",borderRadius:2.5,background:"var(--accent)",width:`${pctLogged}%`,transition:"width 0.4s"}}/>
+        <div style={{marginTop:8,height:5,borderRadius:2.5,background:`${eDayEl.colore}22`,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:2.5,background:eDayEl.colore,width:`${pctLogged}%`,transition:"width 0.4s"}}/>
         </div>
         <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
       </div>
@@ -1048,7 +1175,7 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <div style={{flex:1,cursor:"pointer"}} onClick={()=>setChartHabit(expanded?null:habit.id)}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:hc,flexShrink:0}}/>
+                  <div style={{width:12,height:12,borderRadius:"50%",background:hc,flexShrink:0}}/>
                   <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{habit.label}</div>
                   {streak>1 && <div style={{fontSize:10,color:"#e07b39"}}>🔥 {streak}</div>}
                 </div>
@@ -1301,9 +1428,9 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             <Toggle label="Mostra 10 Tronchi Celesti (天干)" on={cfg.showTronco!==false} onChange={v=>setCfg(c=>({...c,showTronco:v}))}/>
             {cfg.showTronco!==false && (
               <div style={{display:"flex",gap:4,marginTop:8,paddingLeft:8}}>
-                {[{k:"chars",l:"甲子 Caratteri"},{k:"nomi",l:"Abc Nomi"}].map(({k,l})=>{
+                {[{k:"chars",l:"甲子 Segni"},{k:"nomi",l:"Abc Nomi"},{k:"emoji",l:"🌳 Emoji"}].map(({k,l})=>{
                   const active=(cfg.troncoMode||"chars")===k;
-                  return <div key={k} onClick={()=>setCfg(c=>({...c,troncoMode:k}))} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>;
+                  return <div key={k} onClick={()=>setCfg(c=>({...c,troncoMode:k}))} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:11,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>;
                 })}
               </div>
             )}
@@ -1314,9 +1441,9 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             <Toggle label="Mostra 12 Rami Terrestri (地支)" on={cfg.showRamo!==false} onChange={v=>setCfg(c=>({...c,showRamo:v}))}/>
             {cfg.showRamo!==false && (
               <div style={{display:"flex",gap:4,marginTop:8,paddingLeft:8}}>
-                {[{k:"emoji",l:"🐉 Emoji"},{k:"nomi",l:"Abc Nomi"}].map(({k,l})=>{
+                {[{k:"emoji",l:"🐉 Emoji"},{k:"nomi",l:"Abc Nomi"},{k:"chars",l:"子丑 Segni"}].map(({k,l})=>{
                   const active=(cfg.ramoMode||"nomi")===k;
-                  return <div key={k} onClick={()=>setCfg(c=>({...c,ramoMode:k}))} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>;
+                  return <div key={k} onClick={()=>setCfg(c=>({...c,ramoMode:k}))} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:11,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>;
                 })}
               </div>
             )}
@@ -1329,6 +1456,31 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <Toggle label="Ekadashi"                   on={cfg.showEk}      onChange={v=>setCfg(c=>({...c,showEk:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="🌙 Tema scuro" on={cfg.darkMode||false} onChange={v=>setCfg(c=>({...c,darkMode:v}))}/>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Units */}
+          <div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Unità di misura</div>
+            <div style={{display:"flex",gap:16}}>
+              <div>
+                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Temperatura</div>
+                <div style={{display:"flex",gap:4}}>
+                  {[{k:"C",l:"°C"},{k:"F",l:"°F"}].map(({k,l})=>{
+                    const a=(cfg.tempUnit||"C")===k;
+                    return <div key={k} onClick={()=>setCfg(c=>({...c,tempUnit:k}))} style={{padding:"5px 16px",borderRadius:8,cursor:"pointer",background:a?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:a?"white":"var(--text-sec)",border:`1px solid ${a?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:a?600:400,transition:"all 0.15s"}}>{l}</div>;
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Distanza</div>
+                <div style={{display:"flex",gap:4}}>
+                  {[{k:"km",l:"km"},{k:"mi",l:"mi"}].map(({k,l})=>{
+                    const a=(cfg.distUnit||"km")===k;
+                    return <div key={k} onClick={()=>setCfg(c=>({...c,distUnit:k}))} style={{padding:"5px 16px",borderRadius:8,cursor:"pointer",background:a?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:a?"white":"var(--text-sec)",border:`1px solid ${a?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:a?600:400,transition:"all 0.15s"}}>{l}</div>;
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="🔔 Promemoria routine" on={cfg.reminderEnabled||false} onChange={requestNotifPermission}/>
           {cfg.reminderEnabled && (
@@ -1513,7 +1665,7 @@ export default function App() {
   const [annoModal, setAnnoModal] = useState(false);
   const [impTab, setImpTab] = useState("calendario");
 
-  const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false});
+  const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false,tempUnit:"C",distUnit:"km"});
   const [baziPersonal, setBaziPersonal] = useLS("bazi_personal", {data:"",ora:"12"});
   const [note, setNote]             = useLS("bazi_note",         {});
   const [events, setEvents]         = useLS("bazi_events",       {});
@@ -1525,6 +1677,7 @@ export default function App() {
   const [habitDeleted, setHabitDeleted]     = useLS("bazi_habit_del",   []);
   const [todoLists, setTodoLists]   = useLS("bazi_todo_lists",   []);
   const [todoDeleted, setTodoDeleted]       = useLS("bazi_todo_del",    []);
+  const [promemoria, setPromemoria] = useLS("bazi_promemoria",   {});
 
   const dark = cfg.darkMode || false;
   const accent = cfg.followDayElement
@@ -1647,6 +1800,7 @@ export default function App() {
                   const dayLog=routineLog[d.toDateString()];
                   const hasRoutine=dayLog&&Object.keys(dayLog).some(k=>dayLog[k]);
                   const dayEvs=events[d.toDateString()]||[];
+                  const dayProm=(promemoria||{})[d.toDateString()]||[];
                   const txtColor=isSel?"white":(dark?"rgba(255,255,255,0.88)":e.colore);
                   return (
                     <div key={ci} onClick={()=>selectDay(d,bazi)} style={{
@@ -1657,6 +1811,17 @@ export default function App() {
                       padding:"2px 1px",boxSizing:"border-box",transition:"background 0.15s",
                       position:"relative",overflow:"hidden"
                     }}>
+                      {/* Piano-key promemoria bars — full left edge */}
+                      {dayProm.length>0 && (()=>{
+                        const sorted=EL_ORDER.flatMap(ek=>dayProm.filter(p=>p.elemento===ek));
+                        return (
+                          <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,display:"flex",flexDirection:"column",zIndex:2}}>
+                            {sorted.map((p,idx)=>(
+                              <div key={p.id} style={{flex:1,background:isSel?"rgba(255,255,255,0.5)":ELEMENTI[p.elemento]?.colore||"#888",borderTop:idx>0?"1px solid rgba(0,0,0,0.08)":"none"}}/>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {/* Piano-key event bars — full right edge */}
                       {dayEvs.length>0 && (()=>{
                         const sorted=EL_ORDER.flatMap(ek=>dayEvs.filter(ev=>ev.elemento===ek));
@@ -1668,20 +1833,24 @@ export default function App() {
                           </div>
                         );
                       })()}
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 4px",flexShrink:0,paddingRight:dayEvs.length?10:4}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 4px",flexShrink:0,paddingLeft:dayProm.length?8:4,paddingRight:dayEvs.length?10:4}}>
                         <span style={{fontSize:13,fontWeight:800,color:txtColor,lineHeight:1}}>{lunarDay}</span>
                         <span style={{fontSize:12,lineHeight:1}}>{mk}</span>
                       </div>
-                      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingRight:dayEvs.length?4:0}}>
+                      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingLeft:dayProm.length?4:0,paddingRight:dayEvs.length?4:0}}>
                         {(()=>{
                           const showT=cfg.showTronco!==false, showR=cfg.showRamo!==false;
                           const tMode=cfg.troncoMode||"chars", rMode=cfg.ramoMode||"nomi";
                           const ramoEl = showR&&(rMode==="emoji"
                             ? <div style={{fontSize:showT?14:20,lineHeight:1.2}}>{ANIMALI_EMOJI[bazi.ramo]}</div>
-                            : <div style={{fontSize:showT?7:9,lineHeight:1.3,color:txtColor,opacity:0.85}}>{ANIMALI[bazi.ramo]}</div>);
+                            : rMode==="chars"
+                              ? <div style={{fontSize:showT?14:18,lineHeight:1.2,color:txtColor,fontWeight:600}}>{RAMI[bazi.ramo]}</div>
+                              : <div style={{fontSize:showT?7:9,lineHeight:1.3,color:txtColor,opacity:0.85}}>{ANIMALI[bazi.ramo]}</div>);
                           const troncoEl = showT&&(tMode==="chars"
                             ? <div style={{fontSize:showR?15:18,lineHeight:1.15,color:txtColor,fontWeight:500}}>{TRONCHI[bazi.tronco]}</div>
-                            : <div style={{fontSize:showR?8:10,lineHeight:1.3,color:txtColor,fontWeight:600}}>{TRONCHI_NOMI[bazi.tronco]}</div>);
+                            : tMode==="emoji"
+                              ? <div style={{fontSize:showR?15:20,lineHeight:1.2}}>{TRONCHI_EMOJI[bazi.tronco]}</div>
+                              : <div style={{fontSize:showR?8:10,lineHeight:1.3,color:txtColor,fontWeight:600}}>{TRONCHI_NOMI[bazi.tronco]}</div>);
                           if(!showT&&!showR) return null;
                           // ramo on top, tronco below
                           return <>{ramoEl}{troncoEl}</>;
@@ -1708,7 +1877,7 @@ export default function App() {
               const activeTasks=routineCfg.filter(t=>t.attiva);
               return (
                 <div style={{marginTop:12,padding:14,background:elbg(el,dark),borderRadius:12,border:`1px solid ${ELEMENTI[el].colore}66`}}>
-                  {(()=>{const lDay=mese.giorni.indexOf(selDay.date)+1; return(
+                  {(()=>{const lDay=mese.giorni.findIndex(d=>d.toDateString()===selDay.date.toDateString())+1; return(
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                     <div>
                       <div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>{lDay}° giorno lunare</div>
@@ -1720,6 +1889,8 @@ export default function App() {
                   </div>
                   );})()}
 
+                  {/* Promemoria — above Events */}
+                  <PromemoriaSection promemoria={promemoria} dateKey={selDay.date.toDateString()} setPromemoria={setPromemoria} dark={dark}/>
                   {/* Events — above Ba-Zi */}
                   <EventsSection events={events} dateKey={selDay.date.toDateString()} setEvents={setEvents} dark={dark}/>
 
@@ -1772,14 +1943,14 @@ export default function App() {
 
                   {/* Morning Routine log */}
                   {activeTasks.length>0 && Object.keys(dayRoutineLog).length>0 && (
-                    <div onClick={()=>setView("routine")} style={{marginBottom:10,padding:"10px 12px",background:dark?"#0d1f12":"#f0faf3",borderRadius:8,border:"0.5px solid #4a7c5933",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                    <div onClick={()=>setView("routine")} style={{marginBottom:10,padding:"10px 12px",background:elbg(el,dark),borderRadius:8,border:`0.5px solid ${ELEMENTI[el].colore}44`,cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                        <div style={{fontSize:12,fontWeight:600,color:"var(--accent)"}}>🌅 Morning Routine</div>
-                        <div style={{fontSize:11,color:"var(--accent)",opacity:0.7}}>→</div>
+                        <div style={{fontSize:12,fontWeight:600,color:ELEMENTI[el].colore}}>🌅 Morning Routine</div>
+                        <div style={{fontSize:11,color:ELEMENTI[el].colore,opacity:0.7}}>→</div>
                       </div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                         {activeTasks.map(task=>(
-                          <span key={task.id} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:dayRoutineLog[task.id]?"var(--accent)":dark?"#222":"#e8e8e8",color:dayRoutineLog[task.id]?"white":"var(--text-sec)"}}>{task.label}</span>
+                          <span key={task.id} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:dayRoutineLog[task.id]?ELEMENTI[el].colore:dark?"#222":"#e8e8e8",color:dayRoutineLog[task.id]?"white":"var(--text-sec)"}}>{task.label}</span>
                         ))}
                       </div>
                     </div>
