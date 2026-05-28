@@ -67,7 +67,7 @@ const EL_ORDER  = ["legno","fuoco","terra","metallo","acqua"];
 
 // Element background — light pastel in light mode, dark tint in dark mode
 function elbg(el, dark) {
-  return dark ? (ELEMENTI[el].colore + "55") : ELEMENTI[el].bg;
+  return dark ? (ELEMENTI[el].colore + "99") : ELEMENTI[el].bg;
 }
 
 function formatDaysAgo(ts) {
@@ -756,7 +756,7 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>🌅 Morning Routine</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label="⚙ Impostazioni Routine" onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
+            <DotsItem label={<><span style={{fontSize:"1em",lineHeight:1}}>⚙️</span> Impostazioni Routine</>} onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
             <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
@@ -922,7 +922,7 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>📊 Habit Tracker</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label="⚙ Impostazioni Habit" onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
+            <DotsItem label={<><span style={{fontSize:"1em",lineHeight:1}}>⚙️</span> Impostazioni Habit</>} onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
             <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
@@ -1060,8 +1060,8 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>✅ To-Do</div>
         <DotsMenu render={close=>(
           <>
-            {activeId && <DotsItem label="🗑 Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
-            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
+            {activeId && <DotsItem label="📓 Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
+            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
           </>
         )}/>
       </div>
@@ -1254,7 +1254,6 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <div style={{fontSize:13,fontWeight:500,color:task.attiva?"var(--text)":"var(--text-sub)"}}>{task.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?"rip.":"min"}</div>
                 </div>
-                <TipoToggle value={tipo} onChange={v=>setRoutineCfg(prev=>prev.map(tk=>tk.id===task.id?{...tk,tipo:v}:tk))}/>
                 <button onClick={()=>{setEditingTask(task.id);setEditLabel(task.label);setEditDur(task.durata);setEditTipo(tipo);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
                 <button onClick={()=>{setRoutineDeleted(prev=>[...cleanOld(prev),{...task,deletedAt:Date.now()}]);setRoutineCfg(prev=>prev.filter(t=>t.id!==task.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
               </div>
@@ -1635,8 +1634,11 @@ export default function App() {
 
                   {/* Morning Routine log */}
                   {activeTasks.length>0 && Object.keys(dayRoutineLog).length>0 && (
-                    <div style={{marginBottom:10,padding:"10px 12px",background:dark?"#0d1f12":"#f0faf3",borderRadius:8,border:"0.5px solid #4a7c5933"}}>
-                      <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:"#4a7c59"}}>🌅 Morning Routine</div>
+                    <div onClick={()=>setView("routine")} style={{marginBottom:10,padding:"10px 12px",background:dark?"#0d1f12":"#f0faf3",borderRadius:8,border:"0.5px solid #4a7c5933",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{fontSize:12,fontWeight:600,color:"#4a7c59"}}>🌅 Morning Routine</div>
+                        <div style={{fontSize:11,color:"#4a7c59",opacity:0.7}}>→</div>
+                      </div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                         {activeTasks.map(task=>(
                           <span key={task.id} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:dayRoutineLog[task.id]?"#4a7c59":dark?"#222":"#e8e8e8",color:dayRoutineLog[task.id]?"white":"var(--text-sec)"}}>{task.label}</span>
