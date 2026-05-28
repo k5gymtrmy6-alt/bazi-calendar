@@ -199,8 +199,33 @@ function liChunDate(year) {
   return new Date(utc.getFullYear(), utc.getMonth(), utc.getDate()); // local midnight
 }
 
-// Ba-Zi month offsets (days from Li Chun) — corrects for elliptical orbit
-const BAZI_MONTH_OFFSETS = [0, 30.5, 61.4, 92.3, 122.6, 153.1, 183.9, 214.9, 245.6, 275.8, 306.1, 336.5, 366.0];
+// ── Astronomical New Moons (Jean Meeus Ch.49, accuracy ±2 min) ────────────────
+function newMoonJDE(k) {
+  const T = k / 1236.85;
+  const J0 = 2451550.09766 + 29.530588861*k + 0.00015437*T*T - 0.000000150*T*T*T;
+  const M  = ((2.5534   + 29.10535669*k  - 0.0000218*T*T) % 360 + 360) % 360 * RAD;
+  const Mp = ((201.5643 + 385.81693528*k + 0.0107438*T*T) % 360 + 360) % 360 * RAD;
+  const F  = ((160.7108 + 390.67050274*k - 0.0016341*T*T) % 360 + 360) % 360 * RAD;
+  const Om = ((124.7746 - 1.5637558*k   + 0.0020691*T*T) % 360 + 360) % 360 * RAD;
+  const E  = 1 - 0.002516*T;
+  return J0
+    - 0.40720*Math.sin(Mp)    + 0.17241*E*Math.sin(M)
+    + 0.01608*Math.sin(2*Mp)  + 0.01039*Math.sin(2*F)
+    + 0.00739*E*Math.sin(Mp-M)- 0.00514*E*Math.sin(Mp+M)
+    + 0.00208*E*E*Math.sin(2*M)- 0.00111*Math.sin(Mp-2*F)
+    - 0.00057*Math.sin(Mp+2*F)- 0.00042*Math.sin(3*Mp)
+    + 0.00042*E*Math.sin(M+2*F)+ 0.00038*E*Math.sin(M-2*F)
+    - 0.00024*E*Math.sin(2*Mp-M)- 0.00017*Math.sin(Om);
+}
+function jdeToLocalDate(jde) {
+  const d = new Date((jde - 2440587.5) * 86400000);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+// 18 consecutive new moon dates starting ~3 months before anno's CNY
+function newMoonsAroundYear(anno) {
+  const k0 = Math.round((anno - 2000) * 12.3685) - 3;
+  return Array.from({length:18}, (_,i) => jdeToLocalDate(newMoonJDE(k0+i)));
+}
 
 function baziDay(d) {
   const n=Math.floor((d-new Date(1924,1,5))/864e5);
@@ -224,19 +249,31 @@ function baziMonth(i, yearTronco) {
   return{tronco:(base + i*2)%10, ramo:(i+2)%12};
 }
 
-// Lunar months based on Ba-Zi solar terms (Li Chun = month 0)
+// Lunar months based on astronomical new moons.
+// Month 1 starts at the Chinese New Year (new moon Jan 20 – Feb 22 of anno).
 function lunarMonths(anno) {
-  const lc = liChunDate(anno);
+  const moons = newMoonsAroundYear(anno);
+  // CNY: new moon in Jan 20 – Feb 22 window
+  let cnyIdx = moons.findIndex(d =>
+    (d.getMonth()===0 && d.getDate()>=20) || (d.getMonth()===1 && d.getDate()<=22));
+  if (cnyIdx < 0) cnyIdx = 2; // should never happen
   return Array.from({length:12}, (_,i) => {
-    const startDay = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate() + Math.round(BAZI_MONTH_OFFSETS[i]));
-    const endDay   = new Date(lc.getFullYear(), lc.getMonth(), lc.getDate() + Math.round(BAZI_MONTH_OFFSETS[i+1]));
-    const len      = Math.round((endDay - startDay) / 864e5);
-    const giorni   = Array.from({length:len}, (_,d) => new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate()+d));
-    return {nome:MESI_NOMI[i], elemento:MESI_EL[i], giorni, start:startDay};
-  });
+    const start = moons[cnyIdx + i];
+    const end   = moons[cnyIdx + i + 1];
+    if (!start || !end) return null;
+    const len = Math.round((end - start) / 864e5);
+    const giorni = Array.from({length:len}, (_,d) =>
+      new Date(start.getFullYear(), start.getMonth(), start.getDate()+d));
+    return {nome:MESI_NOMI[i], elemento:MESI_EL[i], giorni, start};
+  }).filter(Boolean);
 }
 
-function findTodayMese(ms,oggi){let f=0;ms.forEach((m,i)=>{if(m.giorni.some(d=>d.toDateString()===oggi.toDateString()))f=i;});return f;}
+// Returns -1 if today is not found in any month
+function findTodayMese(ms,oggi){
+  let f=-1;
+  ms.forEach((m,i)=>{if(m.giorni.some(d=>d.toDateString()===oggi.toDateString()))f=i;});
+  return f;
+}
 
 // ── localStorage hook ─────────────────────────────────────────────────────────
 function _setLocalTs(key) {
@@ -771,43 +808,72 @@ function AnalogTimer({ durata, el, onClose }) {
 }
 
 // ── Routine Stats ─────────────────────────────────────────────────────────────
-function RoutineStats({ routineLog, routineCfg, onClose }) {
+// ── 14-day grid (shared for Routine + Habit) ─────────────────────────────────
+// items: [{id, label, ...}], log14: {dateString: {id: value}}
+// isQuit mode: "done" = no value logged (for quitting habits)
+function StoricoGrid({ items, log14, isQuit=false, onClose, dark }) {
   const oggi = new Date();
-  const days = Array.from({length:14},(_,i)=>{
-    const d=new Date(oggi.getTime()-(13-i)*86400000);
-    const key=d.toDateString(), tasks=routineCfg.filter(t=>t.attiva), log=routineLog[key]||{};
-    const done=tasks.filter(t=>log[t.id]).length;
-    return {key,d,label:d.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,1).toUpperCase(),pct:tasks.length?done/tasks.length:0,done,total:tasks.length,isOggi:d.toDateString()===oggi.toDateString()};
+  const days = Array.from({length:14}, (_,i) => {
+    const d = new Date(oggi.getTime() - (13-i) * 86400000);
+    return {d, key:d.toDateString(), isOggi:d.toDateString()===oggi.toDateString()};
   });
-  const avgPct=days.filter(d=>d.total>0).reduce((a,d)=>a+d.pct,0)/Math.max(1,days.filter(d=>d.total>0).length);
-  const streak=(()=>{let s=0;for(let i=13;i>=0;i--){if(days[i].pct===1)s++;else break;}return s;})();
-
+  const isDone = (key, it) => {
+    const v = (log14[key]||{})[it.id];
+    return isQuit ? !(+v>0) : (+v>0 || v===true);
+  };
+  const streak = (()=>{
+    let s=0;
+    for(let i=13;i>=0;i--){
+      if(items.length>0 && items.every(it=>isDone(days[i].key,it))) s++;
+      else break;
+    }
+    return s;
+  })();
+  const complete = days.filter(({key})=>items.length>0&&items.every(it=>isDone(key,it))).length;
   return (
-    <div style={{background:"var(--bg-wash)",borderRadius:12,padding:"14px",marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>📊 Storico 14 giorni</div>
+    <div style={{background:"var(--bg-wash)",borderRadius:12,padding:"12px",marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{fontSize:11,color:"var(--text-sec)"}}>streak {streak} · {complete} complete su 14</span>
         <button onClick={onClose} style={{background:"none",border:"none",fontSize:16,color:"var(--text-sub)",cursor:"pointer",padding:"0 2px"}}>✕</button>
       </div>
-      <div style={{display:"flex",gap:8,marginBottom:10}}>
-        {[{v:streak,l:"streak"},{v:`${Math.round(avgPct*100)}%`,l:"media 14gg"},{v:days.filter(d=>d.pct===1).length,l:"complete"}].map(({v,l})=>(
-          <div key={l} style={{background:"var(--bg-card)",borderRadius:8,padding:"6px 10px",border:"0.5px solid var(--border-ter)",flex:1,textAlign:"center"}}>
-            <div style={{fontSize:16,fontWeight:700,color:"var(--text)"}}>{v}</div>
-            <div style={{fontSize:10,color:"var(--text-sub)"}}>{l}</div>
+      <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+        <div style={{minWidth: Math.max(260, 58+14*22)}}>
+          <div style={{display:"flex",marginBottom:3}}>
+            <div style={{width:58,flexShrink:0}}/>
+            {days.map(({d,isOggi})=>(
+              <div key={d.toDateString()} style={{width:22,flexShrink:0,textAlign:"center",fontSize:7,color:isOggi?"var(--accent)":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1.3}}>
+                {d.getDate()}<br/><span style={{fontSize:6,opacity:0.7}}>{d.getMonth()+1}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:3,alignItems:"flex-end",padding:"4px 0"}}>
-        {days.map(({key,label,pct,isOggi})=>(
-          <div key={key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-            <div style={{height:40,display:"flex",alignItems:"flex-end",width:"100%"}}>
-              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"var(--accent)":pct>0?"var(--accent-66)":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
+          {items.map(it=>(
+            <div key={it.id} style={{display:"flex",alignItems:"center",marginBottom:2}}>
+              <div style={{width:58,flexShrink:0,fontSize:9,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:4}}>{it.label}</div>
+              {days.map(({key,isOggi})=>{
+                const done = isDone(key, it);
+                return (
+                  <div key={key} style={{width:22,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <div style={{
+                      width:16,height:16,borderRadius:3,
+                      background:done?"var(--accent)":dark?"#2a2a2a":"var(--bg-gray)",
+                      border:isOggi?`1px solid var(--accent-44)`:`0.5px solid ${dark?"#333":"var(--border-ter)"}`,
+                      display:"flex",alignItems:"center",justifyContent:"center"
+                    }}>
+                      {done&&<span style={{fontSize:7,color:"white",lineHeight:1}}>✓</span>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div style={{fontSize:8,color:isOggi?"var(--accent)":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
+}
+
+function RoutineStats({ routineLog, routineCfg, onClose, dark }) {
+  return <StoricoGrid items={routineCfg.filter(t=>t.attiva)} log14={routineLog} onClose={onClose} dark={dark}/>;
 }
 
 // ── Habit 30-day Chart ────────────────────────────────────────────────────────
@@ -1168,7 +1234,7 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
         <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
       </div>
 
-      {showStats && <RoutineStats routineLog={routineLog} routineCfg={routineCfg} onClose={()=>setShowStats(false)}/>}
+      {showStats && <RoutineStats routineLog={routineLog} routineCfg={routineCfg} onClose={()=>setShowStats(false)} dark={dark}/>}
 
       {tasks.map(task=>{
         const isDone=!!log[task.id], timerOpen=activeTimer===task.id;
@@ -1231,45 +1297,9 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
   );
 }
 
-// ── Habit Stats (14-day aggregate) ───────────────────────────────────────────
-function HabitStats({ habitCfg, habitLog, onClose }) {
-  const oggi = new Date();
+function HabitStats({ habitCfg, habitLog, onClose, dark }) {
   const activeH = habitCfg.filter(h=>h.attiva!==false);
-  const days = Array.from({length:14},(_,i)=>{
-    const d=new Date(oggi.getTime()-(13-i)*86400000);
-    const key=d.toDateString(), log=habitLog[key]||{};
-    const total=activeH.length;
-    const logged=activeH.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
-    return{key,d,label:d.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,1).toUpperCase(),pct:total?logged/total:0,logged,total,isOggi:d.toDateString()===oggi.toDateString()};
-  });
-  const avgPct=days.filter(d=>d.total>0).reduce((a,d)=>a+d.pct,0)/Math.max(1,days.filter(d=>d.total>0).length);
-  const streak=(()=>{let s=0;for(let i=13;i>=0;i--){if(days[i].pct===1)s++;else break;}return s;})();
-  return (
-    <div style={{background:"var(--bg-wash)",borderRadius:12,padding:"14px",marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>📊 Storico 14 giorni</div>
-        <button onClick={onClose} style={{background:"none",border:"none",fontSize:16,color:"var(--text-sub)",cursor:"pointer",padding:"0 2px"}}>✕</button>
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:10}}>
-        {[{v:streak,l:"streak"},{v:`${Math.round(avgPct*100)}%`,l:"media 14gg"},{v:days.filter(d=>d.pct===1).length,l:"complete"}].map(({v,l})=>(
-          <div key={l} style={{background:"var(--bg-card)",borderRadius:8,padding:"6px 10px",border:"0.5px solid var(--border-ter)",flex:1,textAlign:"center"}}>
-            <div style={{fontSize:16,fontWeight:700,color:"var(--text)"}}>{v}</div>
-            <div style={{fontSize:10,color:"var(--text-sub)"}}>{l}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:3,alignItems:"flex-end",padding:"4px 0"}}>
-        {days.map(({key,label,pct,isOggi})=>(
-          <div key={key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-            <div style={{height:40,display:"flex",alignItems:"flex-end",width:"100%"}}>
-              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"var(--accent)":pct>0?"var(--accent-66)":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
-            </div>
-            <div style={{fontSize:8,color:isOggi?"var(--accent)":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <StoricoGrid items={activeH} log14={habitLog} onClose={onClose} dark={dark}/>;
 }
 
 // ── Habit Tracker ─────────────────────────────────────────────────────────────
@@ -1285,7 +1315,7 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
   const activeHabits = habitCfg.filter(h=>h.attiva!==false);
 
   // Recap stats (active only)
-  const logged=activeHabits.filter(h=>{const v=log[h.id];return v!==undefined&&v!==""&&v!=="0"&&+v>0;}).length;
+  const logged=activeHabits.filter(h=>{const v=log[h.id]; return h.modoSmettere ? !(+v>0) : (v!==undefined&&v!==""&&v!=="0"&&+v>0);}).length;
   const pctLogged=activeHabits.length>0?Math.round((logged/activeHabits.length)*100):0;
 
   function restoreHabit(habit) {
@@ -1297,12 +1327,14 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
   function setVal(id,value) {
     setHabitLog(prev=>({...prev,[todayKey]:{...(prev[todayKey]||{}),[id]:value}}));
   }
-  function getStreak(habitId) {
+  function getStreak(habit) {
+    const isQuit = habit.modoSmettere;
     let streak=0;
     for(let i=0;i<30;i++){
       const key=new Date(oggi.getTime()-i*86400000).toDateString();
-      const v=habitLog[key]?.[habitId];
-      if(v!==undefined&&v!==""&&v!=="0"&&+v>0)streak++;else break;
+      const v=habitLog[key]?.[habit.id];
+      const done = isQuit ? !(+v>0) : (v!==undefined&&v!==""&&v!=="0"&&+v>0);
+      if(done)streak++;else break;
     }
     return streak;
   }
@@ -1338,12 +1370,12 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
         </div>
         <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
       </div>
-      {showStats && <HabitStats habitCfg={habitCfg} habitLog={habitLog} onClose={()=>setShowStats(false)}/>}
+      {showStats && <HabitStats habitCfg={habitCfg} habitLog={habitLog} onClose={()=>setShowStats(false)} dark={dark}/>}
 
       {activeHabits.map(habit=>{
         const hc=habit.colore||"var(--accent)";
         const val=log[habit.id]??"", numVal=parseFloat(val)||0;
-        const streak=getStreak(habit.id), hasVal=val!==""&&val!=="0"&&+val>0;
+        const streak=getStreak(habit), hasVal=val!==""&&val!=="0"&&+val>0;
         const expanded=chartHabit===habit.id;
         return (
           <div key={habit.id} style={{padding:"8px 10px",background:hasVal?(dark?hc+"22":hc+"14"):"var(--bg-card)",border:`0.5px solid ${hasVal?hc+"55":"var(--border-ter)"}`,borderRadius:10,marginBottom:5}}>
@@ -1541,7 +1573,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
 }
 
 // ── Impostazioni ──────────────────────────────────────────────────────────────
-function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="calendario", authUser, syncStatus, signInEmail, createAccount, signOutUser, signInAnon }) {
+function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, signInEmail, createAccount, signOutUser, signInAnon, events, promemoria }) {
   const dark = cfg.darkMode || false;
   const [section, setSection] = useState(defaultSection);
   const [authMode, setAuthMode] = useState("login"); // login | register
@@ -1585,12 +1617,83 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
   return (
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
-      <div style={{fontSize:16,fontWeight:600,marginBottom:12,color:"var(--text)"}}>Impostazioni</div>
-      <div style={{display:"flex",gap:4,marginBottom:18}}>
-        {[{k:"calendario",l:"Calendario"},{k:"routine",l:"Routine"},{k:"habit",l:"Habit"},{k:"account",l:"Account"}].map(t=>(
-          <button key={t.k} onClick={()=>setSection(t.k)} style={{flex:1,fontSize:11,padding:"7px 0",background:section===t.k?"var(--accent)":"var(--bg-gray)",color:section===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:section===t.k?600:400}}>{t.l}</button>
+      <div style={{fontSize:16,fontWeight:500,marginBottom:12,color:"var(--text)",letterSpacing:"0.5px"}}>Impostazioni</div>
+      <div style={{display:"flex",gap:3,marginBottom:18,flexWrap:"wrap"}}>
+        {[{k:"generali",l:"Generali"},{k:"calendario",l:"Calendario"},{k:"routine",l:"Routine"},{k:"habit",l:"Habit"},{k:"account",l:"Account"}].map(t=>(
+          <button key={t.k} onClick={()=>setSection(t.k)} style={{flex:1,minWidth:58,fontSize:10,padding:"7px 2px",background:section===t.k?"var(--accent)":"var(--bg-gray)",color:section===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:section===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
+
+      {/* ── Generali ── */}
+      {section==="generali" && (
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {/* Tema colore */}
+          <div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Colore tema app</div>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+              {Object.entries(ELEMENTI).map(([k,e])=>(
+                <div key={k} onClick={()=>setCfg(c=>({...c,accentColor:e.colore,followDayElement:false}))} style={{width:28,height:28,borderRadius:"50%",background:e.colore,cursor:"pointer",border:(cfg.accentColor===e.colore&&!cfg.followDayElement)?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
+              ))}
+            </div>
+            <Toggle label="Segui elemento del giorno" on={cfg.followDayElement||false} onChange={v=>setCfg(c=>({...c,followDayElement:v}))}/>
+          </div>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          <Toggle label="🌙 Tema scuro" on={cfg.darkMode||false} onChange={v=>setCfg(c=>({...c,darkMode:v}))}/>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Unità di misura */}
+          <div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Unità di misura</div>
+            <div style={{display:"flex",gap:16}}>
+              <div>
+                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Temperatura</div>
+                <div style={{display:"flex",gap:4}}>
+                  {[{k:"C",l:"°C"},{k:"F",l:"°F"}].map(({k,l})=>{
+                    const a=(cfg.tempUnit||"C")===k;
+                    return <div key={k} onClick={()=>setCfg(c=>({...c,tempUnit:k}))} style={{padding:"5px 14px",borderRadius:8,cursor:"pointer",background:a?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:a?"white":"var(--text-sec)",border:`1px solid ${a?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:a?600:400,transition:"all 0.15s"}}>{l}</div>;
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Distanza</div>
+                <div style={{display:"flex",gap:4}}>
+                  {[{k:"km",l:"km"},{k:"mi",l:"mi"}].map(({k,l})=>{
+                    const a=(cfg.distUnit||"km")===k;
+                    return <div key={k} onClick={()=>setCfg(c=>({...c,distUnit:k}))} style={{padding:"5px 14px",borderRadius:8,cursor:"pointer",background:a?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:a?"white":"var(--text-sec)",border:`1px solid ${a?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:a?600:400,transition:"all 0.15s"}}>{l}</div>;
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Posizione */}
+          <div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>📍 Posizione (orari luna + Ba-Zi preciso)</div>
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:"var(--text-ter)",marginBottom:3}}>Latitudine</div>
+                <input type="number" step="0.1" min="-90" max="90"
+                  value={cfg.lat??41.9} onChange={e=>setCfg(c=>({...c,lat:parseFloat(e.target.value)||41.9}))}
+                  style={{width:"100%",fontSize:12}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:"var(--text-ter)",marginBottom:3}}>Longitudine</div>
+                <input type="number" step="0.1" min="-180" max="180"
+                  value={cfg.lon??12.5} onChange={e=>setCfg(c=>({...c,lon:parseFloat(e.target.value)||12.5}))}
+                  style={{width:"100%",fontSize:12}}/>
+              </div>
+            </div>
+            <button onClick={()=>{
+              if(!("geolocation" in navigator)) return alert("GPS non disponibile");
+              navigator.geolocation.getCurrentPosition(
+                pos=>setCfg(c=>({...c,lat:Math.round(pos.coords.latitude*10)/10,lon:Math.round(pos.coords.longitude*10)/10})),
+                ()=>alert("Impossibile ottenere la posizione GPS")
+              );
+            }} style={{width:"100%",fontSize:11,padding:"7px",background:"var(--bg-sec)",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>
+              📡 Usa posizione GPS
+            </button>
+          </div>
+        </div>
+      )}
 
       {section==="calendario" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -1636,61 +1739,6 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <Toggle label="Segno zodiacale della Luna" on={cfg.showLunaZod} onChange={v=>setCfg(c=>({...c,showLunaZod:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="Ekadashi"                   on={cfg.showEk}      onChange={v=>setCfg(c=>({...c,showEk:v}))}/>
-          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          <Toggle label="🌙 Tema scuro" on={cfg.darkMode||false} onChange={v=>setCfg(c=>({...c,darkMode:v}))}/>
-          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          {/* Units */}
-          <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Unità di misura</div>
-            <div style={{display:"flex",gap:16}}>
-              <div>
-                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Temperatura</div>
-                <div style={{display:"flex",gap:4}}>
-                  {[{k:"C",l:"°C"},{k:"F",l:"°F"}].map(({k,l})=>{
-                    const a=(cfg.tempUnit||"C")===k;
-                    return <div key={k} onClick={()=>setCfg(c=>({...c,tempUnit:k}))} style={{padding:"5px 16px",borderRadius:8,cursor:"pointer",background:a?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:a?"white":"var(--text-sec)",border:`1px solid ${a?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:a?600:400,transition:"all 0.15s"}}>{l}</div>;
-                  })}
-                </div>
-              </div>
-              <div>
-                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Distanza</div>
-                <div style={{display:"flex",gap:4}}>
-                  {[{k:"km",l:"km"},{k:"mi",l:"mi"}].map(({k,l})=>{
-                    const a=(cfg.distUnit||"km")===k;
-                    return <div key={k} onClick={()=>setCfg(c=>({...c,distUnit:k}))} style={{padding:"5px 16px",borderRadius:8,cursor:"pointer",background:a?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:a?"white":"var(--text-sec)",border:`1px solid ${a?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:a?600:400,transition:"all 0.15s"}}>{l}</div>;
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          {/* Posizione per orari luna */}
-          <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>📍 Posizione (orari alba/tramonto luna)</div>
-            <div style={{display:"flex",gap:8,marginBottom:8}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:10,color:"var(--text-ter)",marginBottom:3}}>Latitudine</div>
-                <input type="number" step="0.1" min="-90" max="90"
-                  value={cfg.lat??41.9} onChange={e=>setCfg(c=>({...c,lat:parseFloat(e.target.value)||41.9}))}
-                  style={{width:"100%",fontSize:12}}/>
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:10,color:"var(--text-ter)",marginBottom:3}}>Longitudine</div>
-                <input type="number" step="0.1" min="-180" max="180"
-                  value={cfg.lon??12.5} onChange={e=>setCfg(c=>({...c,lon:parseFloat(e.target.value)||12.5}))}
-                  style={{width:"100%",fontSize:12}}/>
-              </div>
-            </div>
-            <button onClick={()=>{
-              if (!("geolocation" in navigator)) return alert("GPS non disponibile");
-              navigator.geolocation.getCurrentPosition(
-                pos=>setCfg(c=>({...c,lat:Math.round(pos.coords.latitude*10)/10,lon:Math.round(pos.coords.longitude*10)/10})),
-                ()=>alert("Impossibile ottenere la posizione GPS")
-              );
-            }} style={{width:"100%",fontSize:11,padding:"7px",background:"var(--bg-sec)",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>
-              📡 Usa posizione GPS
-            </button>
-          </div>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="🔔 Promemoria routine" on={cfg.reminderEnabled||false} onChange={requestNotifPermission}/>
           {cfg.reminderEnabled && (
@@ -1742,17 +1790,22 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               </div>
             );
             return (
-              <div key={task.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+              <div key={task.id} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:5}}>
+                {/* Reorder */}
+                <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
+                  <button onClick={()=>setRoutineCfg(prev=>{const i=prev.indexOf(task);if(i===0)return prev;const a=[...prev];[a[i-1],a[i]]=[a[i],a[i-1]];return a;})} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:10,cursor:"pointer",padding:"0 2px",lineHeight:1}}>▲</button>
+                  <button onClick={()=>setRoutineCfg(prev=>{const i=prev.indexOf(task);if(i===prev.length-1)return prev;const a=[...prev];[a[i],a[i+1]]=[a[i+1],a[i]];return a;})} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:10,cursor:"pointer",padding:"0 2px",lineHeight:1}}>▼</button>
+                </div>
                 <div onClick={()=>setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,attiva:!t.attiva}:t))}
-                     style={{width:20,height:20,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:task.attiva?"var(--accent)":"transparent",border:`2px solid ${task.attiva?"var(--accent)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  {task.attiva && <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>}
+                     style={{width:18,height:18,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:task.attiva?"var(--accent)":"transparent",border:`2px solid ${task.attiva?"var(--accent)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {task.attiva && <span style={{color:"white",fontSize:10,lineHeight:1}}>✓</span>}
                 </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:500,color:task.attiva?"var(--text)":"var(--text-sub)"}}>{task.label}</div>
-                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?"rip.":"min"}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:500,color:task.attiva?"var(--text)":"var(--text-sub)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.label}</div>
+                  <div style={{fontSize:9,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?"rip.":"min"}</div>
                 </div>
-                <button onClick={()=>{setEditingTask(task.id);setEditLabel(task.label);setEditDur(task.durata);setEditTipo(tipo);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
-                <button onClick={()=>{setRoutineDeleted(prev=>[...cleanOld(prev),{...task,deletedAt:Date.now()}]);setRoutineCfg(prev=>prev.filter(t=>t.id!==task.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
+                <button onClick={()=>{setEditingTask(task.id);setEditLabel(task.label);setEditDur(task.durata);setEditTipo(tipo);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:13,cursor:"pointer",padding:"0 1px",lineHeight:1}}>✏️</button>
+                <button onClick={()=>{setRoutineDeleted(prev=>[...cleanOld(prev),{...task,deletedAt:Date.now()}]);setRoutineCfg(prev=>prev.filter(t=>t.id!==task.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 1px",lineHeight:1}}>×</button>
               </div>
             );
           })}
@@ -1798,18 +1851,30 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               </div>
             );
             return (
-              <div key={habit.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
+              <div key={habit.id} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:5}}>
+                {/* Reorder */}
+                <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
+                  <button onClick={()=>setHabitCfg(prev=>{const i=prev.indexOf(habit);if(i===0)return prev;const a=[...prev];[a[i-1],a[i]]=[a[i],a[i-1]];return a;})} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:10,cursor:"pointer",padding:"0 2px",lineHeight:1}}>▲</button>
+                  <button onClick={()=>setHabitCfg(prev=>{const i=prev.indexOf(habit);if(i===prev.length-1)return prev;const a=[...prev];[a[i],a[i+1]]=[a[i+1],a[i]];return a;})} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:10,cursor:"pointer",padding:"0 2px",lineHeight:1}}>▼</button>
+                </div>
                 <div onClick={()=>setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,attiva:!(h.attiva!==false)}:h))}
-                     style={{width:20,height:20,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:habit.attiva!==false?hc:"transparent",border:`2px solid ${habit.attiva!==false?hc:"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  {habit.attiva!==false && <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>}
+                     style={{width:18,height:18,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:habit.attiva!==false?hc:"transparent",border:`2px solid ${habit.attiva!==false?hc:"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {habit.attiva!==false && <span style={{color:"white",fontSize:10,lineHeight:1}}>✓</span>}
                 </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:500,color:habit.attiva!==false?"var(--text)":"var(--text-sub)"}}>{habit.label}</div>
-                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:12,fontWeight:500,color:habit.attiva!==false?"var(--text)":"var(--text-sub)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{habit.label}</span>
+                    {habit.modoSmettere && <span style={{fontSize:8,background:"#e53e3e22",color:"#e53e3e",borderRadius:4,padding:"0 4px",flexShrink:0}}>smetti</span>}
+                  </div>
+                  <div style={{fontSize:9,color:"var(--text-sub)"}}>{habit.unita||"—"}</div>
                 </div>
-                <div style={{width:10,height:10,borderRadius:"50%",background:hc,flexShrink:0}}/>
-                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:14,cursor:"pointer",padding:"0 2px",lineHeight:1}}>✏️</button>
-                <button onClick={()=>{setHabitDeleted(prev=>[...cleanOld(prev),{...habit,deletedAt:Date.now()}]);setHabitCfg(prev=>prev.filter(h=>h.id!==habit.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:20,cursor:"pointer",padding:"0 2px",lineHeight:1}}>×</button>
+                <div style={{width:8,height:8,borderRadius:"50%",background:hc,flexShrink:0}}/>
+                {/* Quit toggle */}
+                <div onClick={()=>setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,modoSmettere:!h.modoSmettere}:h))} title={habit.modoSmettere?"Modalità: smettere (streak=giorni senza)":"Modalità: imparare (streak=giorni con)"} style={{fontSize:11,cursor:"pointer",opacity:0.6,flexShrink:0}}>
+                  {habit.modoSmettere?"🚫":"✅"}
+                </div>
+                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:13,cursor:"pointer",padding:"0 1px",lineHeight:1}}>✏️</button>
+                <button onClick={()=>{setHabitDeleted(prev=>[...cleanOld(prev),{...habit,deletedAt:Date.now()}]);setHabitCfg(prev=>prev.filter(h=>h.id!==habit.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 1px",lineHeight:1}}>×</button>
               </div>
             );
           })}
@@ -1863,6 +1928,29 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               <button onClick={()=>signOutUser()} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"#e53e3e",border:"0.5px solid #e53e3e44",borderRadius:8,cursor:"pointer"}}>
                 Esci dall'account
               </button>
+              <div style={{padding:"14px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)"}}>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:8}}>📅 Calendario dispositivo</div>
+                <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5,marginBottom:10}}>
+                  Esporta gli eventi di Ba-Zi Calendar come file .ics per importarli in Apple Calendario, Google Calendar o qualsiasi app calendario.
+                </div>
+                <button onClick={()=>{
+                  // Build ICS with promemoria + events
+                  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ba-Zi Calendar//IT","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+                  const allEvts = Object.entries(events||{}).flatMap(([dk,evs])=>(evs||[]).map(ev=>({...ev,dk})));
+                  const allProm = Object.entries(promemoria||{}).flatMap(([dk,proms])=>(proms||[]).filter(p=>!p.fatto).map(p=>({...p,dk})));
+                  const toICSDate = dk => { const d=new Date(dk); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
+                  [...allEvts,...allProm].forEach(item=>{
+                    lines.push("BEGIN:VEVENT",`UID:${item.id}@bazicalendar`,`DTSTART;VALUE=DATE:${toICSDate(item.dk)}`,`DTEND;VALUE=DATE:${toICSDate(item.dk)}`,`SUMMARY:${(item.titolo||item.testo||"Evento").replace(/,/g,"\\,")}`,`DESCRIPTION:Ba-Zi Calendar Event`,"END:VEVENT");
+                  });
+                  lines.push("END:VCALENDAR");
+                  const blob=new Blob([lines.join("\r\n")],{type:"text/calendar"});
+                  const url=URL.createObjectURL(blob);
+                  const a=document.createElement("a"); a.href=url; a.download="bazi-calendar.ics"; a.click();
+                  URL.revokeObjectURL(url);
+                }} style={{width:"100%",padding:"9px",fontSize:12,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
+                  ⬇️ Esporta come .ics
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -2101,12 +2189,17 @@ function PromemoriaMemoView({ promemoria, setPromemoria, dark }) {
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const oggi = new Date();
-  // Ba-Zi year: before Li Chun, use previous year
-  const initAnno = oggi < liChunDate(oggi.getFullYear()) ? oggi.getFullYear()-1 : oggi.getFullYear();
+  // Find Ba-Zi anno whose lunar months contain today
+  const initAnno = (()=>{
+    const y = oggi.getFullYear();
+    const base = oggi < liChunDate(y) ? y-1 : y;
+    if (findTodayMese(lunarMonths(base), oggi) >= 0) return base;
+    return base + 1; // CNY falls before LiChun edge case
+  })();
 
   const [view, setView] = useState("calendario");
   const [anno, setAnno] = useState(initAnno);
-  const [meseIdx, setMeseIdx] = useState(()=>findTodayMese(lunarMonths(initAnno),oggi));
+  const [meseIdx, setMeseIdx] = useState(()=>Math.max(0, findTodayMese(lunarMonths(initAnno),oggi)));
   const [selDay, setSelDay] = useState(null);
   const [meseModal, setMeseModal] = useState(false);
   const [elModal, setElModal] = useState(null);
@@ -2206,9 +2299,11 @@ export default function App() {
   const mesi=lunarMonths(anno), mese=mesi[meseIdx], byYear=baziYear(anno);
 
   function goOggi(){
-    const a=oggi<liChunDate(oggi.getFullYear())?oggi.getFullYear()-1:oggi.getFullYear();
-    setAnno(a);setMeseIdx(findTodayMese(lunarMonths(a),oggi));
-    setSelDay({date:oggi,bazi:baziDay(oggi)});setMoonTap(false);
+    let a = oggi<liChunDate(oggi.getFullYear())?oggi.getFullYear()-1:oggi.getFullYear();
+    let idx = findTodayMese(lunarMonths(a), oggi);
+    if (idx < 0) { a++; idx = findTodayMese(lunarMonths(a), oggi); }
+    setAnno(a); setMeseIdx(Math.max(0, idx));
+    setSelDay({date:oggi,bazi:baziDay(oggi)}); setMoonTap(false);
   }
   function prevMese(){if(meseIdx===0){setAnno(a=>a-1);setMeseIdx(11);}else setMeseIdx(m=>m-1);}
   function nextMese(){if(meseIdx===11){setAnno(a=>a+1);setMeseIdx(0);}else setMeseIdx(m=>m+1);}
@@ -2327,21 +2422,37 @@ export default function App() {
         {/* ── Calendario ─────────────────────────────────────── */}
         {view==="calendario" && (
           <div style={{padding:"1rem"}}>
-            {/* Anno header */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-              <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none"}}>
-                <div style={{fontSize:20,fontWeight:600,color:"var(--text)"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
-                <div style={{fontSize:12,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
-              </div>
-              <button onClick={goOggi} style={{fontSize:11,padding:"5px 10px"}}>Oggi</button>
-            </div>
+            {/* Anno header + Moon widget + Oggi */}
+            {(()=>{
+              const todayP = moonPhase(oggi);
+              const todayMt = moonTimesForDate(oggi, cfg.lat??41.9, cfg.lon??12.5);
+              const illum = Math.round(50*(1-Math.cos(todayP/SYNODIC*2*Math.PI)));
+              return (
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                  <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none",flex:1,minWidth:0}}>
+                    <div style={{fontSize:18,fontWeight:500,color:"var(--text)",letterSpacing:"0.5px"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
+                    <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
+                  </div>
+                  <div onClick={()=>setMoonBodyModal(true)} style={{cursor:"pointer",padding:"5px 9px",borderRadius:10,background:"var(--bg-card)",border:"0.5px solid var(--border-sec)",textAlign:"center",flexShrink:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:16,lineHeight:1}}>{moonEmoji(todayP)}</span>
+                      <div>
+                        <div style={{fontSize:11,fontWeight:500,color:"var(--text)",lineHeight:1.2}}>{illum}%</div>
+                        <div style={{fontSize:8,color:"var(--text-sub)",lineHeight:1.2}}>{moonName(todayP)}</div>
+                      </div>
+                    </div>
+                    {todayMt && <div style={{fontSize:8,color:"var(--text-ter)",marginTop:2,letterSpacing:"0.3px"}}>↑{todayMt.rise} ↓{todayMt.set}</div>}
+                  </div>
+                  <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>Oggi</button>
+                </div>
+              );
+            })()}
 
             {/* Legenda elementi */}
-            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
               {Object.entries(ELEMENTI).map(([k,e])=>(
-                <span key={k} onClick={()=>setElModal(k)} style={{fontSize:11,background:elbg(k,dark),color:dark?"rgba(255,255,255,0.88)":e.colore,borderRadius:5,padding:"3px 8px",border:`1px solid ${e.colore}${dark?"99":"55"}`,cursor:"pointer",fontWeight:600}}>{e.char} {e.nome}</span>
+                <span key={k} onClick={()=>setElModal(k)} style={{fontSize:10,background:elbg(k,dark),color:dark?"rgba(255,255,255,0.88)":e.colore,borderRadius:5,padding:"2px 7px",border:`0.5px solid ${e.colore}${dark?"77":"44"}`,cursor:"pointer",fontWeight:500}}>{e.char} {e.nome}</span>
               ))}
-              <span onClick={()=>setMoonBodyModal(true)} style={{fontSize:11,color:"var(--text-sub)",padding:"3px 4px",cursor:"pointer"}}>🌑🌓🌕🌗</span>
             </div>
 
             {/* Nav mese */}
@@ -2381,7 +2492,8 @@ export default function App() {
                   return (
                     <div key={ci} onClick={()=>selectDay(d,bazi)} style={{
                       background:isSel?e.colore:elbg(el,dark),
-                      border:isOggi?`2px solid ${e.colore}`:`1px solid ${e.colore}88`,
+                      border:isSel?`2px solid white`:isOggi?`2px solid ${e.colore}`:`0.5px solid ${e.colore}${dark?"55":"33"}`,
+                      boxShadow:isOggi&&!isSel?`0 0 0 1.5px ${e.colore}`:"none",
                       borderRadius:7,cursor:"pointer",textAlign:"center",
                       height:76,display:"flex",flexDirection:"column",
                       padding:"2px 1px",boxSizing:"border-box",transition:"background 0.15s",
@@ -2556,7 +2668,7 @@ export default function App() {
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
         {view==="memo"         && <PromemoriaMemoView promemoria={promemoria} setPromemoria={setPromemoria} dark={dark}/>}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
-        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon}/>}
+        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} events={events} promemoria={promemoria}/>}
       </div>
 
       {/* Conflict resolution modal */}
