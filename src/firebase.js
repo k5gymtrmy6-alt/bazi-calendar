@@ -7,21 +7,17 @@ import {
   getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp,
 } from 'firebase/firestore';
 
-// ─── CONFIGURE HERE ────────────────────────────────────────────────────────────
-// Crea un progetto su https://console.firebase.google.com
-// Abilita Authentication > Email/Password e Firestore Database
-// Incolla la tua configurazione sotto:
+// ─── Firebase config ───────────────────────────────────────────────────────────
 const FIREBASE_CONFIG = {
-  apiKey:            "PLACEHOLDER",
-  authDomain:        "PLACEHOLDER.firebaseapp.com",
-  projectId:         "PLACEHOLDER",
-  storageBucket:     "PLACEHOLDER.firebasestorage.app",
-  messagingSenderId: "PLACEHOLDER",
-  appId:             "PLACEHOLDER",
+  apiKey:            "AIzaSyDAuUW1UHAywSgD5kPRb4ehFT8G1AzQQVg",
+  authDomain:        "ba-zi-calendar.firebaseapp.com",
+  projectId:         "ba-zi-calendar",
+  storageBucket:     "ba-zi-calendar.firebasestorage.app",
+  messagingSenderId: "855381438695",
+  appId:             "1:855381438695:web:82d9731016fc9c67637242",
 };
 // ───────────────────────────────────────────────────────────────────────────────
 
-// LS keys that are synced to Firestore (without the 'bazi_' prefix as Firestore doc id)
 export const SYNC_KEYS = [
   'bazi_cfg','bazi_note','bazi_events',
   'bazi_routine_cfg','bazi_routine_log','bazi_routine_del',
@@ -29,7 +25,6 @@ export const SYNC_KEYS = [
   'bazi_todo_lists','bazi_todo_del','bazi_promemoria','bazi_personal',
 ];
 
-// Detect if Firebase is actually configured
 const configured = !FIREBASE_CONFIG.apiKey.startsWith('PLACEHOLDER');
 
 let _app, _auth, _db;
@@ -47,8 +42,6 @@ if (configured) {
 export const firebaseEnabled = configured && !!_auth;
 export const auth = _auth;
 export const db   = _db;
-
-// ─── Auth helpers ──────────────────────────────────────────────────────────────
 
 export function onAuthChange(cb) {
   if (!firebaseEnabled) { cb(null); return () => {}; }
@@ -70,8 +63,6 @@ export async function createAccount(email, password) {
 export async function signOutUser() {
   return fbSignOut(_auth);
 }
-
-// ─── Firestore helpers ─────────────────────────────────────────────────────────
 
 function docRef(uid, lsKey) {
   return doc(_db, 'users', uid, 'data', lsKey);
