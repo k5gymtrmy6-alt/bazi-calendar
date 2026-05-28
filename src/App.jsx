@@ -169,8 +169,8 @@ function Toggle({ on, onChange, label }) {
   return (
     <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"space-between"}}>
       <span style={{fontSize:13,color:"var(--text)"}}>{label}</span>
-      <div onClick={()=>onChange(!on)} style={{width:40,height:22,borderRadius:11,cursor:"pointer",background:on?"#4a7c59":"transparent",border:"2px solid #4a7c59",position:"relative",flexShrink:0,transition:"background 0.2s"}}>
-        <div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:on?20:3,width:16,height:16,borderRadius:"50%",background:on?"white":"#4a7c59",transition:"left 0.2s,background 0.2s"}}/>
+      <div onClick={()=>onChange(!on)} style={{width:40,height:22,borderRadius:11,cursor:"pointer",background:on?"var(--accent)":"transparent",border:"2px solid #4a7c59",position:"relative",flexShrink:0,transition:"background 0.2s"}}>
+        <div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:on?20:3,width:16,height:16,borderRadius:"50%",background:on?"white":"var(--accent)",transition:"left 0.2s,background 0.2s"}}/>
       </div>
     </div>
   );
@@ -200,12 +200,13 @@ function DotsItem({ label, onClick, color, sep }) {
 
 function ModalBox({ onClose, children, zIndex=100, elKey=null, dark=false }) {
   const bg = elKey
-    ? (dark ? (ELEMENTI[elKey]?.colore+"12") : ({legno:"#f0faf3",fuoco:"#fef3ee",terra:"#fdf8ec",metallo:"#f5f5f4",acqua:"#eef6fd"}[elKey]||"#f8f8f6"))
-    : (dark ? "var(--bg-sec)" : "#f8f8f6");
+    ? (dark ? "#1e1e1e" : ({legno:"#f0faf3",fuoco:"#fef3ee",terra:"#fdf8ec",metallo:"#f5f5f4",acqua:"#eef6fd"}[elKey]||"#f8f8f6"))
+    : (dark ? "#1e1e1e" : "#f8f8f6");
+  const border2 = elKey ? `1px solid ${ELEMENTI[elKey]?.colore ?? "#ccc"}55` : "1px solid var(--border)";
   const border = elKey ? `0.5px solid ${ELEMENTI[elKey]?.colore ?? "#ccc"}44` : "0.5px solid var(--border)";
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex,padding:"0 1rem"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:bg,border,borderRadius:16,padding:"1.5rem",width:"100%",maxWidth:340,maxHeight:"85vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,0.22)"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:bg,border:border2,borderRadius:16,padding:"1.5rem",width:"100%",maxWidth:340,maxHeight:"85vh",overflowY:"auto",boxShadow:"0 8px 40px rgba(0,0,0,0.45)"}}>
         {children}
       </div>
     </div>
@@ -284,11 +285,11 @@ function MoonBodyModal({ currentPhase, onClose, dark }) {
         {phases.map(([ph,info])=>{
           const isCurrent = ph===currentPhase;
           return (
-            <div key={ph} style={{borderRadius:10,border:`0.5px solid ${isCurrent?"#4a7c59":"var(--border-ter)"}`,overflow:"hidden",background:isCurrent?(dark?"#0d1f12":"#f0faf3"):"var(--bg-card)"}}>
-              <div style={{padding:"8px 12px",background:isCurrent?"#4a7c5922":"var(--bg-wash)",display:"flex",alignItems:"center",gap:6}}>
+            <div key={ph} style={{borderRadius:10,border:`0.5px solid ${isCurrent?"var(--accent)":"var(--border-ter)"}`,overflow:"hidden",background:isCurrent?(dark?"#0d1f12":"#f0faf3"):"var(--bg-card)"}}>
+              <div style={{padding:"8px 12px",background:isCurrent?"var(--accent-22)":"var(--bg-wash)",display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:16}}>{info.em}</span>
-                <span style={{fontSize:12,fontWeight:600,color:isCurrent?"#4a7c59":"var(--text)"}}>{ph}</span>
-                {isCurrent && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:"auto"}}>ora</span>}
+                <span style={{fontSize:12,fontWeight:600,color:isCurrent?"var(--accent)":"var(--text)"}}>{ph}</span>
+                {isCurrent && <span style={{fontSize:9,background:"var(--accent)",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:"auto"}}>ora</span>}
               </div>
               <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
                 {[["🧬",info.corpo,"corpo"],["🌱",info.natura,"natura"],["🧘",info.psiche,"psiche"]].map(([ico,txt,k])=>(
@@ -318,7 +319,7 @@ function InfoModal({ onClose, dark }) {
       <ModalHeader title="Guida Ba-Zi" onClose={onClose}/>
       <div style={{display:"flex",gap:4,marginBottom:16}}>
         {tabs.map(t=>(
-          <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,fontSize:11,padding:"5px 0",background:tab===t.k?"#4a7c59":dark?"#1a2a1a":"#e0ede6",color:tab===t.k?"white":dark?"#aaa":"#333",border:"none",borderRadius:6,cursor:"pointer",fontWeight:tab===t.k?600:400}}>{t.l}</button>
+          <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,fontSize:11,padding:"5px 0",background:tab===t.k?"var(--accent)":dark?"#1a2a1a":"#e0ede6",color:tab===t.k?"white":dark?"#aaa":"#333",border:"none",borderRadius:6,cursor:"pointer",fontWeight:tab===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
 
@@ -409,6 +410,36 @@ function MeseModal({ mese, idx, onClose, dark }) {
   );
 }
 
+function AnnoModal({ anno, byYear, onClose, dark }) {
+  const elT=TRONCO_EL[byYear.tronco], elR=RAMO_EL[byYear.ramo];
+  const eT=ELEMENTI[elT], eR=ELEMENTI[elR];
+  return (
+    <ModalBox onClose={onClose} zIndex={200} elKey={elT} dark={dark}>
+      <ModalHeader title={`${TRONCHI[byYear.tronco]}${RAMI[byYear.ramo]} · ${anno}`} onClose={onClose}/>
+      <div style={{textAlign:"center",marginBottom:12}}>
+        <div style={{fontSize:32}}>{ANIMALI_EMOJI[byYear.ramo]}</div>
+        <div style={{fontSize:16,fontWeight:600,color:eR.colore,marginTop:4}}>{ANIMALI[byYear.ramo]}</div>
+        <div style={{fontSize:12,color:"var(--text-sec)",marginTop:2}}>{eT.char} {eT.nome} · {eR.char} {eR.nome}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        <div style={{background:elbg(elT,dark),borderRadius:8,padding:10,textAlign:"center",border:`0.5px solid ${eT.colore}44`}}>
+          <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>Cielo dell'Anno</div>
+          <div style={{fontSize:30,color:dark?"white":eT.colore}}>{TRONCHI[byYear.tronco]}</div>
+          <div style={{fontSize:12,fontWeight:600,color:dark?"rgba(255,255,255,0.85)":eT.colore}}>{TRONCHI_NOMI[byYear.tronco]}</div>
+        </div>
+        <div style={{background:elbg(elR,dark),borderRadius:8,padding:10,textAlign:"center",border:`0.5px solid ${eR.colore}44`}}>
+          <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>Terra dell'Anno</div>
+          <div style={{fontSize:30,color:dark?"white":eR.colore}}>{RAMI[byYear.ramo]}</div>
+          <div style={{fontSize:12,fontWeight:600,color:dark?"rgba(255,255,255,0.85)":eR.colore}}>{ANIMALI[byYear.ramo]}</div>
+        </div>
+      </div>
+      <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.7,borderLeft:`3px solid ${eT.colore}`,paddingLeft:10}}>
+        {ANIMALI_INFO[byYear.ramo]?.tratti}
+      </div>
+    </ModalBox>
+  );
+}
+
 // ── Events Section (Calendar) ─────────────────────────────────────────────────
 function EventsSection({ events, dateKey, setEvents, dark }) {
   const [showAdd, setShowAdd] = useState(false);
@@ -431,7 +462,7 @@ function EventsSection({ events, dateKey, setEvents, dark }) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
         <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>📅 Eventi</div>
         <button onClick={()=>setShowAdd(s=>!s)} style={{
-          fontSize:11,padding:"3px 10px",background:showAdd?"var(--bg-gray)":"#4a7c59",
+          fontSize:11,padding:"3px 10px",background:showAdd?"var(--bg-gray)":"var(--accent)",
           color:showAdd?"var(--text-sec)":"white",border:"none",borderRadius:10,cursor:"pointer",fontWeight:500
         }}>{showAdd ? "✕ Annulla" : "+ Aggiungi"}</button>
       </div>
@@ -465,7 +496,7 @@ function EventsSection({ events, dateKey, setEvents, dark }) {
               }}>{e.char} {e.nome}</div>
             ))}
           </div>
-          <button onClick={addEvent} style={{width:"100%",padding:"8px",fontSize:13,background:"#4a7c59",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
+          <button onClick={addEvent} style={{width:"100%",padding:"8px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
             Aggiungi evento
           </button>
         </div>
@@ -490,7 +521,7 @@ function AnalogTimer({ durata, el, onClose }) {
 
   const pct=remaining/total, R=44, CX=55, CY=55, circ=2*Math.PI*R;
   const mins=Math.floor(remaining/60), secs=remaining%60;
-  const fillColor=done?"#4a7c59":e.colore;
+  const fillColor=done?"var(--accent)":e.colore;
 
   return (
     <div style={{background:elbg(el,false),borderRadius:12,padding:"14px 12px",border:`0.5px solid ${e.colore}33`,marginTop:6,marginBottom:2,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
@@ -500,7 +531,7 @@ function AnalogTimer({ durata, el, onClose }) {
           strokeDasharray={circ} strokeDashoffset={circ*(1-pct)} strokeLinecap="round"
           style={{transform:"rotate(-90deg)",transformOrigin:`${CX}px ${CY}px`,transition:running?"stroke-dashoffset 0.9s linear":"none"}}/>
         {done ? (
-          <text x={CX} y={CY+5} textAnchor="middle" fontSize={22} fill="#4a7c59" fontWeight={700} fontFamily="inherit">✓</text>
+          <text x={CX} y={CY+5} textAnchor="middle" fontSize={22} fill="var(--accent)" fontWeight={700} fontFamily="inherit">✓</text>
         ) : (
           <>
             <text x={CX} y={CY+4} textAnchor="middle" fontSize={17} fill={e.colore} fontWeight={600} fontFamily="inherit">
@@ -516,7 +547,7 @@ function AnalogTimer({ durata, el, onClose }) {
             {running?"⏸":"▶"}
           </button>
         )}
-        {done && <button onClick={()=>{setRemaining(total);setRunning(false);}} style={{fontSize:13,padding:"7px 14px",background:"#4a7c59",color:"white",border:"none",borderRadius:8,cursor:"pointer"}}>↺ Ripeti</button>}
+        {done && <button onClick={()=>{setRemaining(total);setRunning(false);}} style={{fontSize:13,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer"}}>↺ Ripeti</button>}
         {!done && <button onClick={()=>{setRemaining(total);setRunning(false);}} style={{fontSize:13,padding:"7px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",color:"var(--text-sub)"}}>↺</button>}
         <button onClick={onClose} style={{fontSize:13,padding:"7px 12px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
       </div>
@@ -554,9 +585,9 @@ function RoutineStats({ routineLog, routineCfg, onClose }) {
         {days.map(({key,label,pct,isOggi})=>(
           <div key={key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
             <div style={{height:40,display:"flex",alignItems:"flex-end",width:"100%"}}>
-              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"#4a7c59":pct>0?"#4a7c5966":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
+              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"var(--accent)":pct>0?"var(--accent-66)":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
             </div>
-            <div style={{fontSize:8,color:isOggi?"#4a7c59":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
+            <div style={{fontSize:8,color:isOggi?"var(--accent)":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
           </div>
         ))}
       </div>
@@ -596,7 +627,7 @@ function HabitChart({ habitId, habitLog }) {
           <div key={key} style={{
             flex:1,
             height:`${Math.max(2,(val/maxVal)*44)}px`,
-            background:isOggi?"#4a7c59":val>0?"#4a7c5977":"var(--bg-gray2)",
+            background:isOggi?"var(--accent)":val>0?"var(--accent-77)":"var(--bg-gray2)",
             borderRadius:"2px 2px 0 0",
             transition:"height 0.2s"
           }}/>
@@ -626,7 +657,7 @@ function TopNav({ view, setView }) {
           return (
             <div key={k} onClick={()=>setView(k==="utility"?"routine":k)}
                  style={{flex:1,textAlign:"center",padding:"8px 0 6px",cursor:"pointer",
-                         color:active?"#4a7c59":"var(--text-sub)",
+                         color:active?"var(--accent)":"var(--text-sub)",
                          borderBottom:active?"2px solid #4a7c59":"2px solid transparent",
                          fontWeight:active?600:400,userSelect:"none"}}>
               <div style={{fontSize:18,lineHeight:1.2}}>{ico}</div>
@@ -641,7 +672,7 @@ function TopNav({ view, setView }) {
             <button key={k} onClick={()=>setView(k)} style={{
               flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
               padding:"8px 4px",borderRadius:12,border:"none",cursor:"pointer",
-              background:view===k?"#4a7c59":"transparent",
+              background:view===k?"var(--accent)":"transparent",
               color:view===k?"white":"var(--text-ter)",
               fontWeight:view===k?600:400,transition:"background 0.15s",
             }}>
@@ -680,49 +711,106 @@ function ShichenPicker({ value, onChange, dark }) {
 }
 
 // ── Ba-Zi Calculator ──────────────────────────────────────────────────────────
-function BaziView({ dark }) {
-  const [data,setData]=useState(""), [ora,setOra]=useState("12"), [ris,setRis]=useState(null);
-  function calcola() {
-    if(!data) return;
+function BaziView({ dark, baziPersonal, setBaziPersonal }) {
+  const [tab, setTab] = useState("calcola");
+  const [shichenOpen, setShichenOpen] = useState(false);
+  const {data="", ora="12"} = baziPersonal || {};
+  function setData(v){setBaziPersonal(p=>({...p,data:v}));}
+  function setOra(v){setBaziPersonal(p=>({...p,ora:v}));setShichenOpen(false);}
+
+  const ris = data ? (()=>{
     const d=new Date(data+"T12:00:00"), h=parseInt(ora);
-    setRis([
+    return [
       {l:"Anno",  b:baziYear(d.getFullYear())},
       {l:"Mese",  b:baziMonth(d.getMonth())},
       {l:"Giorno",b:baziDay(d)},
       {l:"Ora",   b:{tronco:Math.floor(h/2)%10,ramo:Math.floor(h/2)%12}},
-    ]);
-  }
+    ];
+  })() : null;
+
+  const selIdx = Math.floor((parseInt(ora)||0)/2) % 12;
+  const selA = ANIMALI_INFO[selIdx];
+
   return (
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
-      <div style={{fontSize:16,fontWeight:600,marginBottom:4,color:"var(--text)"}}>Ba-Zi personale</div>
-      <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:16}}>Inserisci data e ora di nascita per calcolare i tuoi Quattro Pilastri.</div>
-      <div style={{background:"var(--bg-card)",border:"0.5px solid var(--border-sec)",borderRadius:12,padding:"1rem"}}>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
-          <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{flex:1,minWidth:140}}/>
-          <button onClick={calcola} style={{padding:"0 16px",background:"#4a7c59",color:"white",border:"none",borderRadius:6}}>Calcola</button>
-        </div>
-        <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:4}}>Ora di nascita — seleziona il 時辰:</div>
-        <ShichenPicker value={ora} onChange={setOra} dark={dark}/>
-        <div style={{height:12}}/>
-        {ris && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-            {ris.map(({l,b})=>{
-              const el=TRONCO_EL[b.tronco];
-              return (
-                <div key={l} style={{background:elbg(el,dark),borderRadius:8,padding:8,textAlign:"center",border:`0.5px solid ${ELEMENTI[el].colore}33`}}>
-                  <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>{l}</div>
-                  <div style={{fontSize:26,color:ELEMENTI[el].colore}}>{TRONCHI[b.tronco]}</div>
-                  <div style={{fontSize:22,color:ELEMENTI[el].colore}}>{RAMI[b.ramo]}</div>
-                  <div style={{fontSize:10,color:ELEMENTI[el].colore,marginTop:2}}>{ANIMALI[b.ramo]}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* Tab bar */}
+      <div style={{display:"flex",gap:4,marginBottom:16}}>
+        {[{k:"calcola",l:"☯ Ba-Zi"},{k:"info",l:"ℹ️ Guida"}].map(t=>(
+          <button key={t.k} onClick={()=>setTab(t.k)} style={{flex:1,fontSize:12,padding:"7px 0",background:tab===t.k?"var(--accent)":"var(--bg-gray)",color:tab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:tab===t.k?600:400}}>{t.l}</button>
+        ))}
       </div>
-      {ris && (
-        <div style={{marginTop:12,fontSize:11,color:"var(--text-sec)",background:"var(--bg-wash)",borderRadius:8,padding:"10px 12px",lineHeight:1.6}}>
-          <strong>Pilastro del Giorno</strong> (日主) — è il tuo Sé autentico. L'elemento del Tronco del giorno rappresenta la tua natura fondamentale.
+
+      {tab==="calcola" && (
+        <>
+          <div style={{fontSize:13,color:"var(--text-sec)",marginBottom:12}}>Inserisci data e ora di nascita per calcolare i tuoi Quattro Pilastri.</div>
+          <div style={{background:"var(--bg-card)",border:"0.5px solid var(--border-sec)",borderRadius:12,padding:"1rem"}}>
+            <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{width:"100%",marginBottom:10}}/>
+            <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:6}}>Ora di nascita — seleziona il 時辰:</div>
+            {/* Shichen: collapsed chip when selected, expand on tap */}
+            {ora && !shichenOpen ? (
+              <div onClick={()=>setShichenOpen(true)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:ELEMENTI[selA.el].colore,borderRadius:10,cursor:"pointer",marginBottom:8}}>
+                <span style={{fontSize:24}}>{selA.emoji}</span>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:"white"}}>{selA.nome}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.75)"}}>{String(selIdx*2).padStart(2,"0")}:00 – {String(selIdx*2+2).padStart(2,"0")}:00 · tocca per cambiare</div>
+                </div>
+              </div>
+            ) : (
+              <ShichenPicker value={ora} onChange={setOra} dark={dark}/>
+            )}
+            {ris && (
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginTop:10}}>
+                {ris.map(({l,b})=>{
+                  const el=TRONCO_EL[b.tronco];
+                  return (
+                    <div key={l} style={{background:elbg(el,dark),borderRadius:8,padding:8,textAlign:"center",border:`0.5px solid ${ELEMENTI[el].colore}33`}}>
+                      <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>{l}</div>
+                      <div style={{fontSize:26,color:dark?"white":ELEMENTI[el].colore}}>{TRONCHI[b.tronco]}</div>
+                      <div style={{fontSize:22,color:dark?"white":ELEMENTI[el].colore}}>{RAMI[b.ramo]}</div>
+                      <div style={{fontSize:10,color:dark?"rgba(255,255,255,0.75)":ELEMENTI[el].colore,marginTop:2}}>{ANIMALI[b.ramo]}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {ris && (
+            <div style={{marginTop:12,fontSize:11,color:"var(--text-sec)",background:"var(--bg-wash)",borderRadius:8,padding:"10px 12px",lineHeight:1.6}}>
+              <strong>Pilastro del Giorno</strong> (日主) — è il tuo Sé autentico. L'elemento del Tronco del giorno rappresenta la tua natura fondamentale.
+            </div>
+          )}
+        </>
+      )}
+
+      {tab==="info" && (
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{background:"var(--bg-card)",borderRadius:12,padding:"14px",border:"0.5px solid var(--border-ter)"}}>
+            <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginBottom:8}}>📖 Leggere il Ba-Zi</div>
+            <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.7}}>
+              Il <strong>Ba-Zi (八字)</strong> — otto caratteri — è il sistema di astrologia cinese basato sull'anno, mese, giorno e ora di nascita.<br/><br/>
+              Ogni pilastro ha un <strong>Tronco Celeste (天干)</strong> e un <strong>Ramo Terrestre (地支)</strong>, che si combinano in coppie. I quattro pilastri rivelano diversi aspetti della vita.
+            </div>
+          </div>
+          {[
+            {ico:"📅",tit:"Anno (年)",desc:"Energia sociale, karma familiare, come il mondo ti percepisce. Definisce il tuo animale zodiacale."},
+            {ico:"🗓",tit:"Mese (月)",desc:"Formazione, ambiente d'infanzia, relazione con i genitori. Indica le influenze nella crescita."},
+            {ico:"☀️",tit:"Giorno (日)",desc:"Il tuo Sé autentico. Il Tronco del giorno è il tuo elemento dominante — la tua natura fondamentale."},
+            {ico:"⏰",tit:"Ora (時)",desc:"Il tuo mondo interiore, aspirazioni, relazioni con i figli. Ciò che cerchi nella vita."},
+          ].map(({ico,tit,desc})=>(
+            <div key={tit} style={{background:"var(--bg-card)",borderRadius:10,padding:"12px",border:"0.5px solid var(--border-ter)"}}>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>{ico} {tit}</div>
+              <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6}}>{desc}</div>
+            </div>
+          ))}
+          <div style={{background:"var(--bg-card)",borderRadius:10,padding:"12px",border:"0.5px solid var(--border-ter)"}}>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:6}}>🌏 I 5 Elementi</div>
+            {Object.entries(ELEMENTI).map(([k,e])=>(
+              <div key={k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:e.colore,flexShrink:0}}/>
+                <div style={{fontSize:12,color:"var(--text-sec)"}}><strong style={{color:e.colore}}>{e.char} {e.nome}</strong> — {e.essenza.split("\n")[0]}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -788,10 +876,10 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
             <div onClick={()=>toggle(task.id)} style={{
               display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
               background:isDone?"var(--accent-bg)":"var(--bg-card)",
-              border:`0.5px solid ${isDone?"#4a7c5944":"var(--border-ter)"}`,
+              border:`0.5px solid ${isDone?"var(--accent-44)":"var(--border-ter)"}`,
               borderRadius:10,cursor:"pointer",transition:"background 0.15s"
             }}>
-              <div style={{width:24,height:24,borderRadius:"50%",flexShrink:0,background:isDone?"#4a7c59":"transparent",border:`2px solid ${isDone?"#4a7c59":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.2s"}}>
+              <div style={{width:24,height:24,borderRadius:"50%",flexShrink:0,background:isDone?"var(--accent)":"transparent",border:`2px solid ${isDone?"var(--accent)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.2s"}}>
                 {isDone && <span style={{color:"white",fontSize:12,lineHeight:1}}>✓</span>}
               </div>
               <div style={{flex:1}}>
@@ -813,7 +901,7 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
         </div>
       )}
       {done===tasks.length && tasks.length>0 && (
-        <div style={{textAlign:"center",padding:"0.75rem",fontSize:14,color:"#4a7c59",fontWeight:600}}>✅ Routine completata!</div>
+        <div style={{textAlign:"center",padding:"0.75rem",fontSize:14,color:"var(--accent)",fontWeight:600}}>✅ Routine completata!</div>
       )}
 
       {/* Recently deleted modal */}
@@ -831,7 +919,7 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
                   <div style={{fontSize:13,color:"var(--text)"}}>{task.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?"rip.":"min"} · {formatDaysAgo(task.deletedAt)}</div>
                 </div>
-                <button onClick={()=>{restoreTask(task);}} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>{restoreTask(task);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
               </div>
             ))
           }
@@ -872,9 +960,9 @@ function HabitStats({ habitCfg, habitLog, onClose }) {
         {days.map(({key,label,pct,isOggi})=>(
           <div key={key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
             <div style={{height:40,display:"flex",alignItems:"flex-end",width:"100%"}}>
-              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"#4a7c59":pct>0?"#4a7c5966":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
+              <div style={{width:"100%",height:`${Math.max(2,pct*40)}px`,background:pct===1?"var(--accent)":pct>0?"var(--accent-66)":"var(--bg-gray2)",borderRadius:3,transition:"height 0.3s"}}/>
             </div>
-            <div style={{fontSize:8,color:isOggi?"#4a7c59":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
+            <div style={{fontSize:8,color:isOggi?"var(--accent)":"var(--text-sub)",fontWeight:isOggi?700:400,lineHeight:1}}>{label}</div>
           </div>
         ))}
       </div>
@@ -940,17 +1028,17 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
             {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
             {" — "}{logged}/{habitCfg.length} registrati
           </div>
-          <div style={{fontSize:11,color:"#4a7c59",background:"#4a7c5918",borderRadius:6,padding:"3px 7px",fontWeight:500}}>{pctLogged}%</div>
+          <div style={{fontSize:11,color:"var(--accent)",background:"var(--accent-18)",borderRadius:6,padding:"3px 7px",fontWeight:500}}>{pctLogged}%</div>
         </div>
         <div style={{marginTop:8,height:5,borderRadius:2.5,background:"var(--bg-gray2)",overflow:"hidden"}}>
-          <div style={{height:"100%",borderRadius:2.5,background:"#4a7c59",width:`${pctLogged}%`,transition:"width 0.4s"}}/>
+          <div style={{height:"100%",borderRadius:2.5,background:"var(--accent)",width:`${pctLogged}%`,transition:"width 0.4s"}}/>
         </div>
         <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
       </div>
       {showStats && <HabitStats habitCfg={habitCfg} habitLog={habitLog} onClose={()=>setShowStats(false)}/>}
 
       {activeHabits.map(habit=>{
-        const hc=habit.colore||"#4a7c59";
+        const hc=habit.colore||"var(--accent)";
         const val=log[habit.id]??"", numVal=parseFloat(val)||0;
         const streak=getStreak(habit.id), hasVal=val!==""&&val!=="0"&&+val>0;
         const expanded=chartHabit===habit.id;
@@ -1011,7 +1099,7 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
                   <div style={{fontSize:13,color:"var(--text)"}}>{habit.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"} · {formatDaysAgo(habit.deletedAt)}</div>
                 </div>
-                <button onClick={()=>restoreHabit(habit)} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>restoreHabit(habit)} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
               </div>
             ))
           }
@@ -1075,12 +1163,12 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
       </div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
         {todoLists.map(l=>(
-          <div key={l.id} onClick={()=>setActiveId(l.id)} style={{padding:"5px 12px",borderRadius:16,fontSize:12,cursor:"pointer",background:activeId===l.id?"#4a7c59":"var(--bg-gray)",color:activeId===l.id?"white":"var(--text)"}}>
+          <div key={l.id} onClick={()=>setActiveId(l.id)} style={{padding:"5px 12px",borderRadius:16,fontSize:12,cursor:"pointer",background:activeId===l.id?"var(--accent)":"var(--bg-gray)",color:activeId===l.id?"white":"var(--text)"}}>
             {l.nome}
           </div>
         ))}
         {!showNewList
-          ? <button onClick={()=>setShowNewList(true)} style={{padding:"5px 10px",fontSize:11,borderRadius:14,background:"transparent",color:"#4a7c59",border:"1px dashed #4a7c59"}}>+ Nuova lista</button>
+          ? <button onClick={()=>setShowNewList(true)} style={{padding:"5px 10px",fontSize:11,borderRadius:14,background:"transparent",color:"var(--accent)",border:"1px dashed #4a7c59"}}>+ Nuova lista</button>
           : <div style={{display:"flex",gap:4,alignItems:"center"}}>
               <input autoFocus value={newListName} onChange={e=>setNewListName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addList();if(e.key==="Escape")setShowNewList(false);}} placeholder="Nome lista" style={{fontSize:12,width:110}}/>
               <button onClick={addList} style={{fontSize:12,padding:"4px 8px"}}>OK</button>
@@ -1096,7 +1184,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
           </div>
           <div style={{display:"flex",gap:6,marginBottom:12}}>
             <input value={newItemText} onChange={e=>setNewItemText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addItem()} placeholder="Aggiungi elemento…" style={{flex:1,fontSize:13}}/>
-            <button onClick={addItem} style={{padding:"6px 14px",fontWeight:600,background:"#4a7c59",color:"white",border:"none",borderRadius:6}}>+</button>
+            <button onClick={addItem} style={{padding:"6px 14px",fontWeight:600,background:"var(--accent)",color:"white",border:"none",borderRadius:6}}>+</button>
           </div>
           {pending.map(item=>(
             <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
@@ -1110,7 +1198,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
               <div style={{fontSize:10,color:"var(--text-sub)",textTransform:"uppercase",letterSpacing:1,marginTop:12,marginBottom:6}}>Completati</div>
               {done.map(item=>(
                 <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"transparent",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:4}}>
-                  <div onClick={()=>toggleItem(item.id)} style={{width:20,height:20,borderRadius:4,cursor:"pointer",flexShrink:0,background:"#4a7c59",border:"2px solid #4a7c59",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <div onClick={()=>toggleItem(item.id)} style={{width:20,height:20,borderRadius:4,cursor:"pointer",flexShrink:0,background:"var(--accent)",border:"2px solid #4a7c59",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>
                   </div>
                   <span style={{flex:1,fontSize:13,color:"var(--text-sub)",textDecoration:"line-through"}}>{item.testo}</span>
@@ -1139,7 +1227,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
                   <div style={{fontSize:13,color:"var(--text)"}}>{lst.nome}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{lst.items?.length||0} elementi · {formatDaysAgo(lst.deletedAt)}</div>
                 </div>
-                <button onClick={()=>restoreList(lst)} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>restoreList(lst)} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
               </div>
             ))
           }
@@ -1175,7 +1263,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
   const TipoToggle = ({value, onChange}) => (
     <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:"0.5px solid var(--border-sec)",flexShrink:0}}>
       {[["tempo","⏱ min"],["rep","🔄 rip"]].map(([t,l])=>(
-        <div key={t} onClick={()=>onChange(t)} style={{padding:"4px 8px",fontSize:10,cursor:"pointer",background:value===t?"#4a7c59":"transparent",color:value===t?"white":"var(--text-sub)",lineHeight:1.4}}>{l}</div>
+        <div key={t} onClick={()=>onChange(t)} style={{padding:"4px 8px",fontSize:10,cursor:"pointer",background:value===t?"var(--accent)":"transparent",color:value===t?"white":"var(--text-sub)",lineHeight:1.4}}>{l}</div>
       ))}
     </div>
   );
@@ -1191,28 +1279,47 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
       <div style={{fontSize:16,fontWeight:600,marginBottom:12,color:"var(--text)"}}>Impostazioni</div>
       <div style={{display:"flex",gap:4,marginBottom:18}}>
         {[{k:"calendario",l:"Calendario"},{k:"routine",l:"Routine"},{k:"habit",l:"Habit"}].map(t=>(
-          <button key={t.k} onClick={()=>setSection(t.k)} style={{flex:1,fontSize:12,padding:"7px 0",background:section===t.k?"#4a7c59":"var(--bg-gray)",color:section===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:section===t.k?600:400}}>{t.l}</button>
+          <button key={t.k} onClick={()=>setSection(t.k)} style={{flex:1,fontSize:12,padding:"7px 0",background:section===t.k?"var(--accent)":"var(--bg-gray)",color:section===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:section===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
 
       {section==="calendario" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          {/* calView 3-way selector */}
+          {/* Accent color */}
           <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Visualizzazione giorni nel calendario</div>
-            <div style={{display:"flex",gap:4}}>
-              {[{k:"chars",l:"甲子",d:"Caratteri cinesi"},{k:"emoji",l:"🐉 Emoji",d:"Emoji animale"},{k:"nomi",l:"Abc",d:"Nomi latini"}].map(({k,l,d})=>{
-                const active=(cfg.calView||"chars")===k;
-                return (
-                  <div key={k} onClick={()=>setCfg(c=>({...c,calView:k}))} title={d} style={{flex:1,textAlign:"center",padding:"10px 6px",borderRadius:9,cursor:"pointer",
-                    background:active?"#4a7c59":dark?"var(--bg-gray)":"var(--bg-wash)",
-                    color:active?"white":dark?"var(--text-sec)":"var(--text)",
-                    border:`1px solid ${active?"#4a7c59":"var(--border-sec)"}`,
-                    fontSize:13,fontWeight:active?700:400,transition:"all 0.15s"
-                  }}>{l}</div>
-                );
-              })}
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Colore tema app</div>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+              {Object.entries(ELEMENTI).map(([k,e])=>(
+                <div key={k} onClick={()=>setCfg(c=>({...c,accentColor:e.colore,followDayElement:false}))} style={{width:28,height:28,borderRadius:"50%",background:e.colore,cursor:"pointer",border:(cfg.accentColor===e.colore&&!cfg.followDayElement)?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
+              ))}
             </div>
+            <Toggle label="Segui elemento del giorno" on={cfg.followDayElement||false} onChange={v=>setCfg(c=>({...c,followDayElement:v}))}/>
+          </div>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Tronchi Celesti */}
+          <div>
+            <Toggle label="Mostra 10 Tronchi Celesti (天干)" on={cfg.showTronco!==false} onChange={v=>setCfg(c=>({...c,showTronco:v}))}/>
+            {cfg.showTronco!==false && (
+              <div style={{display:"flex",gap:4,marginTop:8,paddingLeft:8}}>
+                {[{k:"chars",l:"甲子 Caratteri"},{k:"nomi",l:"Abc Nomi"}].map(({k,l})=>{
+                  const active=(cfg.troncoMode||"chars")===k;
+                  return <div key={k} onClick={()=>setCfg(c=>({...c,troncoMode:k}))} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>;
+                })}
+              </div>
+            )}
+          </div>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Rami Terrestri */}
+          <div>
+            <Toggle label="Mostra 12 Rami Terrestri (地支)" on={cfg.showRamo!==false} onChange={v=>setCfg(c=>({...c,showRamo:v}))}/>
+            {cfg.showRamo!==false && (
+              <div style={{display:"flex",gap:4,marginTop:8,paddingLeft:8}}>
+                {[{k:"emoji",l:"🐉 Emoji"},{k:"nomi",l:"Abc Nomi"}].map(({k,l})=>{
+                  const active=(cfg.ramoMode||"nomi")===k;
+                  return <div key={k} onClick={()=>setCfg(c=>({...c,ramoMode:k}))} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:12,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>;
+                })}
+              </div>
+            )}
           </div>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="Data gregoriana"            on={cfg.showGreg}    onChange={v=>setCfg(c=>({...c,showGreg:v}))}/>
@@ -1247,7 +1354,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <TipoToggle value={editTipo} onChange={setEditTipo}/>
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,label:editLabel.trim()||t.label,durata:editDur,tipo:editTipo}:t));setEditingTask(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>{setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,label:editLabel.trim()||t.label,durata:editDur,tipo:editTipo}:t));setEditingTask(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
                   <button onClick={()=>setEditingTask(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
                 </div>
               </div>
@@ -1255,7 +1362,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             return (
               <div key={task.id} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div onClick={()=>setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,attiva:!t.attiva}:t))}
-                     style={{width:20,height:20,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:task.attiva?"#4a7c59":"transparent",border:`2px solid ${task.attiva?"#4a7c59":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                     style={{width:20,height:20,borderRadius:"50%",cursor:"pointer",flexShrink:0,background:task.attiva?"var(--accent)":"transparent",border:`2px solid ${task.attiva?"var(--accent)":"var(--border)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
                   {task.attiva && <span style={{color:"white",fontSize:11,lineHeight:1}}>✓</span>}
                 </div>
                 <div style={{flex:1}}>
@@ -1269,12 +1376,12 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           })}
           {/* Add task form */}
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
-            <div style={{fontSize:12,fontWeight:600,color:"#4a7c59",marginBottom:8}}>+ Aggiungi task</div>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--accent)",marginBottom:8}}>+ Aggiungi task</div>
             <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
               <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&document.getElementById("btn-add-task")?.click()} placeholder="Nome task" style={{flex:1,minWidth:100,fontSize:12}}/>
               <input type="number" value={newTaskDur} onChange={e=>setNewTaskDur(+e.target.value)} min={0} style={{width:52,fontSize:12}}/>
               <TipoToggle value={newTaskTipo} onChange={setNewTaskTipo}/>
-              <button id="btn-add-task" onClick={()=>{if(!newTask.trim())return;setRoutineCfg(prev=>[...prev,{id:Date.now().toString(),label:newTask.trim(),durata:newTaskDur,tipo:newTaskTipo,attiva:true}]);setNewTask("");setNewTaskDur(5);setNewTaskTipo("tempo");}} style={{padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
+              <button id="btn-add-task" onClick={()=>{if(!newTask.trim())return;setRoutineCfg(prev=>[...prev,{id:Date.now().toString(),label:newTask.trim(),durata:newTaskDur,tipo:newTaskTipo,attiva:true}]);setNewTask("");setNewTaskDur(5);setNewTaskTipo("tempo");}} style={{padding:"5px 12px",fontSize:12,background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
             </div>
           </div>
           {/* Link to recently deleted */}
@@ -1303,7 +1410,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   ))}
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim(),colore:editHColore}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim(),colore:editHColore}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
                   <button onClick={()=>setEditingHabit(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
                 </div>
               </div>
@@ -1325,7 +1432,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             );
           })}
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
-            <div style={{fontSize:12,fontWeight:600,color:"#4a7c59",marginBottom:8}}>+ Aggiungi habit</div>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--accent)",marginBottom:8}}>+ Aggiungi habit</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
               <input value={newHabit} onChange={e=>setNewHabit(e.target.value)} placeholder="Nome (es. Acqua)" style={{flex:1,minWidth:100,fontSize:12}}/>
               <input value={newHabitUnit} onChange={e=>setNewHabitUnit(e.target.value)} placeholder="Unità (l, h, min…)" style={{flex:1,minWidth:80,fontSize:12}}/>
@@ -1335,7 +1442,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 <div key={c} onClick={()=>setNewHabitColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:newHabitColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
               ))}
             </div>
-            <button onClick={()=>{if(!newHabit.trim())return;setHabitCfg(prev=>[...prev,{id:Date.now().toString(),label:newHabit.trim(),tipo:"numero",unita:newHabitUnit.trim(),attiva:true,colore:newHabitColore}]);setNewHabit("");setNewHabitUnit("");setNewHabitColore(HABIT_COLORS[0]);}} style={{width:"100%",padding:"5px 12px",fontSize:12,background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
+            <button onClick={()=>{if(!newHabit.trim())return;setHabitCfg(prev=>[...prev,{id:Date.now().toString(),label:newHabit.trim(),tipo:"numero",unita:newHabitUnit.trim(),attiva:true,colore:newHabitColore}]);setNewHabit("");setNewHabitUnit("");setNewHabitColore(HABIT_COLORS[0]);}} style={{width:"100%",padding:"5px 12px",fontSize:12,background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
           </div>
           {/* Link to recently deleted */}
           <div style={{marginTop:14,paddingTop:12,borderTop:"0.5px solid var(--border-ter)",textAlign:"center"}}>
@@ -1359,7 +1466,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <div style={{fontSize:13,color:"var(--text)"}}>{task.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?"rip.":"min"} · {formatDaysAgo(task.deletedAt)}</div>
                 </div>
-                <button onClick={()=>{const{deletedAt,...c}=task;setRoutineCfg(prev=>[...prev,c]);setRoutineDeleted(prev=>prev.filter(t=>t.id!==task.id));setShowRDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>{const{deletedAt,...c}=task;setRoutineCfg(prev=>[...prev,c]);setRoutineDeleted(prev=>prev.filter(t=>t.id!==task.id));setShowRDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
               </div>
             ))
           }
@@ -1379,7 +1486,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <div style={{fontSize:13,color:"var(--text)"}}>{habit.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"} · {formatDaysAgo(habit.deletedAt)}</div>
                 </div>
-                <button onClick={()=>{const{deletedAt,...c}=habit;setHabitCfg(prev=>[...prev,c]);setHabitDeleted(prev=>prev.filter(h=>h.id!==habit.id));setShowHDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"#4a7c59",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>{const{deletedAt,...c}=habit;setHabitCfg(prev=>[...prev,c]);setHabitDeleted(prev=>prev.filter(h=>h.id!==habit.id));setShowHDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
               </div>
             ))
           }
@@ -1401,12 +1508,13 @@ export default function App() {
   const [meseModal, setMeseModal] = useState(false);
   const [elModal, setElModal] = useState(null);
   const [ekModal, setEkModal] = useState(false);
-  const [infoModal, setInfoModal] = useState(false);
   const [moonBodyModal, setMoonBodyModal] = useState(false);
   const [moonTap, setMoonTap] = useState(false);
+  const [annoModal, setAnnoModal] = useState(false);
   const [impTab, setImpTab] = useState("calendario");
 
-  const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,darkMode:false,reminderEnabled:false,reminderTime:"07:00",calView:"chars"});
+  const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false});
+  const [baziPersonal, setBaziPersonal] = useLS("bazi_personal", {data:"",ora:"12"});
   const [note, setNote]             = useLS("bazi_note",         {});
   const [events, setEvents]         = useLS("bazi_events",       {});
   const [routineCfg, setRoutineCfg] = useLS("bazi_routine_cfg", DEFAULT_ROUTINE_CFG);
@@ -1419,13 +1527,22 @@ export default function App() {
   const [todoDeleted, setTodoDeleted]       = useLS("bazi_todo_del",    []);
 
   const dark = cfg.darkMode || false;
+  const accent = cfg.followDayElement
+    ? ELEMENTI[TRONCO_EL[baziDay(oggi).tronco]].colore
+    : (cfg.accentColor || "#4a7c59");
 
-  // Auto dark mode from system preference (if no manual preference set yet)
+  // Update CSS accent variables whenever accent or dark mode changes
   useEffect(()=>{
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    // Only auto-apply if user hasn't explicitly set preference
-    // cfg.darkMode persists their choice; we just initialise on first load
-  },[]);
+    const r = document.documentElement.style;
+    r.setProperty('--accent', accent);
+    r.setProperty('--accent-18', accent + '18');
+    r.setProperty('--accent-22', accent + '22');
+    r.setProperty('--accent-44', accent + '44');
+    r.setProperty('--accent-66', accent + '66');
+    r.setProperty('--accent-77', accent + '77');
+    r.setProperty('--accent-bg', dark ? accent + '22' : accent + '12');
+    r.setProperty('--accent-border', accent + '40');
+  },[accent, dark]);
 
   // Daily routine reminder notification
   useEffect(()=>{
@@ -1462,7 +1579,7 @@ export default function App() {
 
   const mesi=lunarMonths(anno), mese=mesi[meseIdx], byYear=baziYear(anno);
 
-  function goOggi(){const a=oggi.getFullYear();setAnno(a);setMeseIdx(findTodayMese(lunarMonths(a),oggi));}
+  function goOggi(){const a=oggi.getFullYear();setAnno(a);setMeseIdx(findTodayMese(lunarMonths(a),oggi));setSelDay({date:oggi,bazi:baziDay(oggi)});setMoonTap(false);}
   function prevMese(){if(meseIdx===0){setAnno(a=>a-1);setMeseIdx(12);}else setMeseIdx(m=>m-1);}
   function nextMese(){if(meseIdx===12){setAnno(a=>a+1);setMeseIdx(0);}else setMeseIdx(m=>m+1);}
   function selectDay(d,bazi){setSelDay(prev=>prev?.date.toDateString()===d.toDateString()?null:{date:d,bazi});setMoonTap(false);}
@@ -1483,20 +1600,17 @@ export default function App() {
           <div style={{padding:"1rem"}}>
             {/* Anno header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-              <div>
+              <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none"}}>
                 <div style={{fontSize:20,fontWeight:600,color:"var(--text)"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
                 <div style={{fontSize:12,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
               </div>
-              <div style={{display:"flex",gap:5}}>
-                <button onClick={goOggi} style={{fontSize:11,padding:"5px 10px"}}>Oggi</button>
-                <button onClick={()=>setInfoModal(true)} style={{fontSize:11,padding:"5px 10px"}}>？</button>
-              </div>
+              <button onClick={goOggi} style={{fontSize:11,padding:"5px 10px"}}>Oggi</button>
             </div>
 
             {/* Legenda elementi */}
             <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
               {Object.entries(ELEMENTI).map(([k,e])=>(
-                <span key={k} onClick={()=>setElModal(k)} style={{fontSize:11,background:elbg(k,dark),color:e.colore,borderRadius:5,padding:"3px 8px",border:`0.5px solid ${e.colore}55`,cursor:"pointer",fontWeight:500}}>{e.char} {e.nome}</span>
+                <span key={k} onClick={()=>setElModal(k)} style={{fontSize:11,background:elbg(k,dark),color:dark?"rgba(255,255,255,0.88)":e.colore,borderRadius:5,padding:"3px 8px",border:`1px solid ${e.colore}${dark?"99":"55"}`,cursor:"pointer",fontWeight:600}}>{e.char} {e.nome}</span>
               ))}
               <span onClick={()=>setMoonBodyModal(true)} style={{fontSize:11,color:"var(--text-sub)",padding:"3px 4px",cursor:"pointer"}}>🌑🌓🌕🌗</span>
             </div>
@@ -1560,25 +1674,24 @@ export default function App() {
                       </div>
                       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingRight:dayEvs.length?4:0}}>
                         {(()=>{
-                          const cv=cfg.calView||"chars";
-                          if(cv==="chars") return <>
-                            <div style={{fontSize:17,lineHeight:1.15,color:txtColor,fontWeight:500}}>{TRONCHI[bazi.tronco]}</div>
-                            <div style={{fontSize:15,lineHeight:1.15,color:txtColor}}>{RAMI[bazi.ramo]}</div>
-                          </>;
-                          if(cv==="emoji") return <>
-                            <div style={{fontSize:20,lineHeight:1.2}}>{ANIMALI_EMOJI[bazi.ramo]}</div>
-                          </>;
-                          return <>
-                            <div style={{fontSize:9,lineHeight:1.3,color:txtColor,fontWeight:600}}>{TRONCHI_NOMI[bazi.tronco]}</div>
-                            <div style={{fontSize:8,lineHeight:1.3,color:txtColor,opacity:0.8}}>{ANIMALI[bazi.ramo]}</div>
-                          </>;
+                          const showT=cfg.showTronco!==false, showR=cfg.showRamo!==false;
+                          const tMode=cfg.troncoMode||"chars", rMode=cfg.ramoMode||"nomi";
+                          const ramoEl = showR&&(rMode==="emoji"
+                            ? <div style={{fontSize:showT?14:20,lineHeight:1.2}}>{ANIMALI_EMOJI[bazi.ramo]}</div>
+                            : <div style={{fontSize:showT?7:9,lineHeight:1.3,color:txtColor,opacity:0.85}}>{ANIMALI[bazi.ramo]}</div>);
+                          const troncoEl = showT&&(tMode==="chars"
+                            ? <div style={{fontSize:showR?15:18,lineHeight:1.15,color:txtColor,fontWeight:500}}>{TRONCHI[bazi.tronco]}</div>
+                            : <div style={{fontSize:showR?8:10,lineHeight:1.3,color:txtColor,fontWeight:600}}>{TRONCHI_NOMI[bazi.tronco]}</div>);
+                          if(!showT&&!showR) return null;
+                          // ramo on top, tronco below
+                          return <>{ramoEl}{troncoEl}</>;
                         })()}
                       </div>
                       <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:3,padding:"2px 4px",flexShrink:0,minHeight:16}}>
                         {cfg.showGreg && <span style={{fontSize:8,color:isSel?"rgba(255,255,255,0.92)":(dark?"rgba(255,255,255,0.7)":"rgba(0,0,0,0.58)"),fontWeight:500}}>{d.getDate()}/{d.getMonth()+1}</span>}
                         {ek && <div style={{width:7,height:7,borderRadius:"50%",background:isSel?"white":"#2e7d32",flexShrink:0}}/>}
                         {haNote && <div style={{width:5,height:5,borderRadius:"50%",background:isSel?"white":e.colore,flexShrink:0}}/>}
-                        {hasRoutine && <div style={{width:5,height:5,borderRadius:"50%",background:isSel?"rgba(255,255,255,0.7)":"#4a7c5966",flexShrink:0}}/>}
+                        {hasRoutine && <div style={{width:5,height:5,borderRadius:"50%",background:isSel?"rgba(255,255,255,0.7)":"var(--accent-66)",flexShrink:0}}/>}
                       </div>
                     </div>
                   );
@@ -1595,15 +1708,17 @@ export default function App() {
               const activeTasks=routineCfg.filter(t=>t.attiva);
               return (
                 <div style={{marginTop:12,padding:14,background:elbg(el,dark),borderRadius:12,border:`1px solid ${ELEMENTI[el].colore}66`}}>
+                  {(()=>{const lDay=mese.giorni.indexOf(selDay.date)+1; return(
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                     <div>
-                      <div style={{fontSize:14,fontWeight:600,textTransform:"capitalize",color:"var(--text)"}}>
-                        {selDay.date.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
+                      <div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>{lDay}° giorno lunare</div>
+                      <div style={{fontSize:12,color:"var(--text-sec)",textTransform:"capitalize",marginTop:2}}>
+                        {selDay.date.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
                       </div>
-                      {cfg.showGreg && <div style={{fontSize:11,color:"var(--text-sec)"}}>{selDay.date.toLocaleDateString("it-IT",{day:"numeric",month:"long",year:"numeric"})}</div>}
                     </div>
                     <button onClick={()=>setSelDay(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"var(--text-sec)",padding:"0 4px"}}>✕</button>
                   </div>
+                  );})()}
 
                   {/* Events — above Ba-Zi */}
                   <EventsSection events={events} dateKey={selDay.date.toDateString()} setEvents={setEvents} dark={dark}/>
@@ -1611,18 +1726,18 @@ export default function App() {
                   {/* Ba-Zi + Luna */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                     <div style={{background:elbg(el,dark),borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${ELEMENTI[el].colore}44`}}>
-                      <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:3}}>Cielo</div>
-                      {cfg.showChinese && <div style={{fontSize:26,lineHeight:1.1,color:ELEMENTI[el].colore}}>{TRONCHI[selDay.bazi.tronco]}</div>}
-                      <div style={{fontSize:12,color:ELEMENTI[el].colore,fontWeight:600,marginTop:2}}>{TRONCHI_NOMI[selDay.bazi.tronco]}</div>
+                      <div style={{fontSize:11,color:dark?"rgba(255,255,255,0.6)":"var(--text-sec)",marginBottom:3}}>Cielo</div>
+                      {cfg.showChinese && <div style={{fontSize:26,lineHeight:1.1,color:dark?"white":ELEMENTI[el].colore}}>{TRONCHI[selDay.bazi.tronco]}</div>}
+                      <div style={{fontSize:12,color:dark?"rgba(255,255,255,0.9)":ELEMENTI[el].colore,fontWeight:600,marginTop:2}}>{TRONCHI_NOMI[selDay.bazi.tronco]}</div>
                       <Badge el={el}/>
                     </div>
                     <div style={{background:elbg(elR,dark),borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${ELEMENTI[elR].colore}44`}}>
-                      <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:3}}>Terra</div>
-                      {cfg.showChinese && <div style={{fontSize:26,lineHeight:1.1,color:ELEMENTI[elR].colore}}>{RAMI[selDay.bazi.ramo]}</div>}
-                      <div style={{fontSize:12,color:ELEMENTI[elR].colore,fontWeight:600,marginTop:2}}>{ANIMALI_EMOJI[selDay.bazi.ramo]} {ANIMALI[selDay.bazi.ramo]}</div>
+                      <div style={{fontSize:11,color:dark?"rgba(255,255,255,0.6)":"var(--text-sec)",marginBottom:3}}>Terra</div>
+                      {cfg.showChinese && <div style={{fontSize:26,lineHeight:1.1,color:dark?"white":ELEMENTI[elR].colore}}>{RAMI[selDay.bazi.ramo]}</div>}
+                      <div style={{fontSize:12,color:dark?"rgba(255,255,255,0.9)":ELEMENTI[elR].colore,fontWeight:600,marginTop:2}}>{ANIMALI_EMOJI[selDay.bazi.ramo]} {ANIMALI[selDay.bazi.ramo]}</div>
                       <Badge el={elR}/>
                     </div>
-                    <div onClick={()=>setMoonTap(s=>!s)} style={{background:dark?"#1a1a20":"#f8f8f6",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`0.5px solid ${moonTap?"#4a7c59":"var(--border-sec)"}`,cursor:"pointer",transition:"border-color 0.15s"}}>
+                    <div onClick={()=>setMoonTap(s=>!s)} style={{background:dark?"#1a1a20":"#f8f8f6",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`0.5px solid ${moonTap?"var(--accent)":"var(--border-sec)"}`,cursor:"pointer",transition:"border-color 0.15s"}}>
                       <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:3}}>Luna</div>
                       <div style={{fontSize:22}}>{moonEmoji(p)}</div>
                       <div style={{fontSize:11,fontWeight:600,marginTop:2,color:"var(--text)"}}>{ph}</div>
@@ -1659,12 +1774,12 @@ export default function App() {
                   {activeTasks.length>0 && Object.keys(dayRoutineLog).length>0 && (
                     <div onClick={()=>setView("routine")} style={{marginBottom:10,padding:"10px 12px",background:dark?"#0d1f12":"#f0faf3",borderRadius:8,border:"0.5px solid #4a7c5933",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                        <div style={{fontSize:12,fontWeight:600,color:"#4a7c59"}}>🌅 Morning Routine</div>
-                        <div style={{fontSize:11,color:"#4a7c59",opacity:0.7}}>→</div>
+                        <div style={{fontSize:12,fontWeight:600,color:"var(--accent)"}}>🌅 Morning Routine</div>
+                        <div style={{fontSize:11,color:"var(--accent)",opacity:0.7}}>→</div>
                       </div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                         {activeTasks.map(task=>(
-                          <span key={task.id} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:dayRoutineLog[task.id]?"#4a7c59":dark?"#222":"#e8e8e8",color:dayRoutineLog[task.id]?"white":"var(--text-sec)"}}>{task.label}</span>
+                          <span key={task.id} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:dayRoutineLog[task.id]?"var(--accent)":dark?"#222":"#e8e8e8",color:dayRoutineLog[task.id]?"white":"var(--text-sec)"}}>{task.label}</span>
                         ))}
                       </div>
                     </div>
@@ -1686,15 +1801,15 @@ export default function App() {
         {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} setImpTab={setImpTab} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
         {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} setImpTab={setImpTab} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
-        {view==="bazi"         && <BaziView dark={dark}/>}
+        {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
         {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} defaultSection={impTab}/>}
       </div>
 
       {/* Modals */}
       {meseModal    && <MeseModal mese={mese} idx={meseIdx} onClose={()=>setMeseModal(false)} dark={dark}/>}
+      {annoModal    && <AnnoModal anno={anno} byYear={byYear} onClose={()=>setAnnoModal(false)} dark={dark}/>}
       {elModal      && <ElementoModal el={elModal} onClose={()=>setElModal(null)} dark={dark}/>}
       {ekModal      && <EkadashiModal onClose={()=>setEkModal(false)} dark={dark}/>}
-      {infoModal    && <InfoModal onClose={()=>setInfoModal(false)} dark={dark}/>}
       {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
     </div>
   );

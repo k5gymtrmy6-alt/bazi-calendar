@@ -18,6 +18,11 @@
   --accent:      #4a7c59;
   --accent-bg:   #f0faf3;
   --accent-border: rgba(74,124,89,0.2);
+  --accent-18:   #4a7c5918;
+  --accent-22:   #4a7c5922;
+  --accent-44:   #4a7c5944;
+  --accent-66:   #4a7c5966;
+  --accent-77:   #4a7c5977;
 }
 
 .dark {
