@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useState, useEffect } from "react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -2197,6 +2198,7 @@ export default function App() {
       {elModal      && <ElementoModal el={elModal} onClose={()=>setElModal(null)} dark={dark}/>}
       {ekModal      && <EkadashiModal onClose={()=>setEkModal(false)} dark={dark}/>}
       {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
+      <SpeedInsights />
     </div>
   );
 }
