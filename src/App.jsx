@@ -930,19 +930,22 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
   return (
     <div style={{borderBottom:"0.5px solid var(--border-ter)",position:"sticky",top:0,background:"var(--bg)",zIndex:50}}>
       <div style={{display:"flex",alignItems:"stretch",maxWidth:480,margin:"0 auto"}}>
-        {/* Logo — rimpiazza il tab Calendario */}
+        {/* Logo — tab Calendario */}
         <div onClick={()=>setView("calendario")} style={{
-          cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
-          padding:"6px 12px",flexShrink:0,
+          flex:1,textAlign:"center",padding:"6px 0 5px",cursor:"pointer",
+          color:isCal?"var(--accent)":"var(--text-sub)",
           borderBottom:isCal?"2px solid var(--accent)":"2px solid transparent",
+          fontWeight:isCal?600:400,userSelect:"none",
+          display:"flex",flexDirection:"column",alignItems:"center",
         }}>
-          <BaziLogo size={26}/>
+          <BaziLogo size={20}/>
+          <div style={{fontSize:10,marginTop:2}}>Calendario</div>
         </div>
         {/* Nav items */}
         {[
           {k:"utility",     label:"Utility",   ico:"⚡"},
-          {k:"impostazioni",label:"Impostaz.", ico:"⚙️"},
           {k:"bazi",        label:"Ba-Zi",     ico:"☯"},
+          {k:"impostazioni",label:"Impostaz.", ico:"⚙️"},
         ].map(({k,label,ico})=>{
           const active = k==="utility" ? isUtility : view===k;
           return (
@@ -1580,45 +1583,81 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
   );
 }
 
-// ── Touch drag-to-reorder list ────────────────────────────────────────────────
-// renderItem(item, idx, dragHandle) — dragHandle is the ≡ element to place in layout
+// ── Touch + mouse drag-to-reorder list ───────────────────────────────────────
+// renderItem(item, idx, dragHandle) — place dragHandle in the item's layout
 function SortableList({ items, onReorder, renderItem }) {
-  const [drag, setDrag] = useState(null); // {srcIdx, overIdx}
+  const [drag, setDrag] = useState(null);
+  const dragRef = useRef(null); // keeps state in sync for window-level handlers
   const refs = useRef([]);
   refs.current = refs.current.slice(0, items.length);
 
-  function onHandleTouch(e, srcIdx) {
-    e.preventDefault();
-    e.stopPropagation();
-    setDrag({ srcIdx, overIdx: srcIdx });
-  }
-
-  function onMove(e) {
-    if (!drag) return;
-    const y = e.touches[0].clientY;
-    let best = drag.overIdx;
+  const getOverIdx = (y) => {
+    let best = dragRef.current?.overIdx ?? 0;
     refs.current.forEach((el, i) => {
       if (!el) return;
       const r = el.getBoundingClientRect();
       if (y >= r.top && y <= r.bottom) best = i;
     });
-    if (best !== drag.overIdx) setDrag(d => ({...d, overIdx: best}));
-  }
+    return best;
+  };
 
-  function onEnd() {
-    if (!drag) return;
-    const { srcIdx, overIdx } = drag;
+  const startDrag = (srcIdx) => {
+    const s = { srcIdx, overIdx: srcIdx };
+    dragRef.current = s;
+    setDrag(s);
+  };
+
+  const moveDrag = (y) => {
+    if (!dragRef.current) return;
+    const overIdx = getOverIdx(y);
+    if (overIdx !== dragRef.current.overIdx) {
+      const s = { ...dragRef.current, overIdx };
+      dragRef.current = s;
+      setDrag(s);
+    }
+  };
+
+  const endDrag = () => {
+    if (!dragRef.current) return;
+    const { srcIdx, overIdx } = dragRef.current;
+    dragRef.current = null;
+    setDrag(null);
     if (srcIdx !== overIdx) {
       const next = [...items];
       const [item] = next.splice(srcIdx, 1);
       next.splice(overIdx, 0, item);
       onReorder(next);
     }
-    setDrag(null);
-  }
+  };
+
+  // Attach mouse move/up to window while dragging (works outside container)
+  useEffect(() => {
+    if (!drag) return;
+    const mm = (e) => moveDrag(e.clientY);
+    const mu = () => endDrag();
+    window.addEventListener('mousemove', mm);
+    window.addEventListener('mouseup', mu);
+    return () => {
+      window.removeEventListener('mousemove', mm);
+      window.removeEventListener('mouseup', mu);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag !== null]);
+
+  const makeHandle = (i) => (
+    <div
+      onTouchStart={(e) => { e.preventDefault(); startDrag(i); }}
+      onMouseDown={(e) => { e.preventDefault(); startDrag(i); }}
+      style={{ touchAction:"none", cursor:"grab", padding:"4px 8px", fontSize:20, color:"var(--n400)", lineHeight:1, flexShrink:0, userSelect:"none" }}
+    >⠿</div>
+  );
 
   return (
-    <div onTouchMove={onMove} onTouchEnd={onEnd} style={{userSelect:"none"}}>
+    <div
+      onTouchMove={(e) => moveDrag(e.touches[0].clientY)}
+      onTouchEnd={endDrag}
+      style={{userSelect:"none"}}
+    >
       {items.map((item, i) => {
         const isDragging = drag?.srcIdx === i;
         const isOver = drag !== null && drag.overIdx === i && !isDragging;
@@ -1629,12 +1668,7 @@ function SortableList({ items, onReorder, renderItem }) {
             borderBottom: isOver && i > drag.srcIdx ? "2px solid var(--accent)" : "none",
             transition: "opacity 0.12s",
           }}>
-            {renderItem(item, i, (
-              <div
-                onTouchStart={e => onHandleTouch(e, i)}
-                style={{ touchAction:"none", cursor:"grab", padding:"4px 8px", fontSize:20, color:"var(--n400)", lineHeight:1, flexShrink:0, userSelect:"none" }}
-              >⠿</div>
-            ))}
+            {renderItem(item, i, makeHandle(i))}
           </div>
         );
       })}
@@ -1845,12 +1879,10 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
       {section==="routine" && (
         <div>
           <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Gestisci i task della Morning Routine. Tieni ≡ per riordinare.</div>
-          {/* Editing form rendered outside SortableList */}
-          {editingTask && routineCfg.find(t=>t.id===editingTask) && (()=>{
-            const task = routineCfg.find(t=>t.id===editingTask);
+          <SortableList items={routineCfg} onReorder={setRoutineCfg} renderItem={(task, _i, dragHandle) => {
             const tipo = task.tipo||"tempo";
-            return (
-              <div style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:8}}>
+            if (editingTask === task.id) return (
+              <div style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:5}}>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
                   <input autoFocus value={editLabel} onChange={e=>setEditLabel(e.target.value)} style={{flex:1,minWidth:100,fontSize:12}}/>
                   <input type="number" value={editDur} onChange={e=>setEditDur(+e.target.value)} min={0} style={{width:52,fontSize:12}}/>
@@ -1862,10 +1894,6 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 </div>
               </div>
             );
-          })()}
-          <SortableList items={routineCfg} onReorder={setRoutineCfg} renderItem={(task, _i, dragHandle) => {
-            if (editingTask === task.id) return null;
-            const tipo = task.tipo||"tempo";
             return (
               <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:5}}>
                 {dragHandle}
@@ -1904,38 +1932,30 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
       {section==="habit" && (
         <div>
           <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Definisci i tuoi habit. Tieni ≡ per riordinare, ✏️ per modificare o cambiare tipo.</div>
-          {/* Editing form outside SortableList */}
-          {editingHabit && habitCfg.find(h=>h.id===editingHabit) && (()=>{
-            const habit = habitCfg.find(h=>h.id===editingHabit);
+          <SortableList items={habitCfg} onReorder={setHabitCfg} renderItem={(habit, _i, dragHandle) => {
             const hc = habit.colore||HABIT_COLORS[0];
-            return (
-              <div style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:8}}>
+            if (editingHabit === habit.id) return (
+              <div style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:5}}>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
                   <input autoFocus value={editHLabel} onChange={e=>setEditHLabel(e.target.value)} placeholder="Nome" style={{flex:1,minWidth:100,fontSize:12}}/>
                   <input value={editHUnit} onChange={e=>setEditHUnit(e.target.value)} placeholder="Unità" style={{width:64,fontSize:12}}/>
                 </div>
                 <div style={{display:"flex",gap:6,marginBottom:8}}>
-                  {HABIT_COLORS.map(c=>(
-                    <div key={c} onClick={()=>setEditHColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:editHColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
-                  ))}
+                  {HABIT_COLORS.map(c=>(<div key={c} onClick={()=>setEditHColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:editHColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0}}/>))}
                 </div>
-                {/* Tipo: costruire vs eliminare */}
-                <div style={{marginBottom:10}}>
-                  <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:5}}>Tipo di abitudine</div>
-                  <div style={{display:"flex",gap:4}}>
-                    {[{k:false,ico:"✅",l:"Costruire",desc:"streak = giorni con"},{k:true,ico:"🚫",l:"Eliminare",desc:"streak = giorni senza"}].map(({k,ico,l,desc})=>(
-                      <div key={String(k)} onClick={()=>setEditHSmettere(k)} style={{
-                        flex:1,textAlign:"center",padding:"8px 4px",borderRadius:8,cursor:"pointer",
-                        background:editHSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
-                        border:editHSmettere===k?`1.5px solid ${k?"#e53e3e":"var(--accent)"}`:"1px solid var(--border-sec)",
-                        color:editHSmettere===k?(k?"#e53e3e":"var(--accent)"):"var(--text-sub)"
-                      }}>
-                        <div style={{fontSize:18,lineHeight:1.2}}>{ico}</div>
-                        <div style={{fontSize:11,fontWeight:editHSmettere===k?600:400,marginTop:2}}>{l}</div>
-                        <div style={{fontSize:9,opacity:0.7,marginTop:1}}>{desc}</div>
-                      </div>
-                    ))}
-                  </div>
+                <div style={{display:"flex",gap:4,marginBottom:10}}>
+                  {[{k:false,ico:"✅",l:"Costruire",desc:"streak = giorni con"},{k:true,ico:"🚫",l:"Smettere",desc:"streak = giorni senza"}].map(({k,ico,l,desc})=>(
+                    <div key={String(k)} onClick={()=>setEditHSmettere(k)} style={{
+                      flex:1,textAlign:"center",padding:"8px 4px",borderRadius:8,cursor:"pointer",
+                      background:editHSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
+                      border:editHSmettere===k?`1.5px solid ${k?"#e53e3e":"var(--accent)"}`:"1px solid var(--border-sec)",
+                      color:editHSmettere===k?(k?"#e53e3e":"var(--accent)"):"var(--text-sub)"
+                    }}>
+                      <div style={{fontSize:16,lineHeight:1.2}}>{ico}</div>
+                      <div style={{fontSize:10,fontWeight:editHSmettere===k?600:400,marginTop:1}}>{l}</div>
+                      <div style={{fontSize:8,opacity:0.7}}>{desc}</div>
+                    </div>
+                  ))}
                 </div>
                 <div style={{display:"flex",gap:6}}>
                   <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim(),colore:editHColore,modoSmettere:editHSmettere}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
@@ -1943,10 +1963,6 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 </div>
               </div>
             );
-          })()}
-          <SortableList items={habitCfg} onReorder={setHabitCfg} renderItem={(habit, _i, dragHandle) => {
-            if (editingHabit === habit.id) return null;
-            const hc = habit.colore||HABIT_COLORS[0];
             return (
               <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:5}}>
                 {dragHandle}
@@ -1960,7 +1976,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 </div>
                 <div style={{width:8,height:8,borderRadius:"50%",background:hc,flexShrink:0}}/>
                 {/* Indicatore tipo — solo icona, nessun testo */}
-                <span style={{fontSize:15,flexShrink:0,opacity:0.65}} title={habit.modoSmettere?"Eliminare (streak=giorni senza)":"Costruire (streak=giorni con)"}>
+                <span style={{fontSize:15,flexShrink:0,opacity:0.65}} title={habit.modoSmettere?"Smettere (streak=giorni senza)":"Costruire (streak=giorni con)"}>
                   {habit.modoSmettere?"🚫":"✅"}
                 </span>
                 <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);setEditHSmettere(habit.modoSmettere||false);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:13,cursor:"pointer",padding:"0 1px",lineHeight:1}}>✏️</button>
@@ -1981,7 +1997,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             </div>
             {/* Tipo: costruire vs eliminare */}
             <div style={{display:"flex",gap:4,marginBottom:10}}>
-              {[{k:false,ico:"✅",l:"Costruire"},{k:true,ico:"🚫",l:"Eliminare"}].map(({k,ico,l})=>(
+              {[{k:false,ico:"✅",l:"Costruire"},{k:true,ico:"🚫",l:"Smettere"}].map(({k,ico,l})=>(
                 <div key={String(k)} onClick={()=>setNewHabitSmettere(k)} style={{
                   flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",
                   background:newHabitSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
@@ -2031,29 +2047,54 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               <button onClick={()=>signOutUser()} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"#e53e3e",border:"0.5px solid #e53e3e44",borderRadius:8,cursor:"pointer"}}>
                 Esci dall'account
               </button>
-              <div style={{padding:"14px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)"}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:8}}>📅 Calendario dispositivo</div>
-                <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5,marginBottom:10}}>
-                  Esporta gli eventi di Ba-Zi Calendar come file .ics per importarli in Apple Calendario, Google Calendar o qualsiasi app calendario.
-                </div>
-                <button onClick={()=>{
-                  // Build ICS with promemoria + events
-                  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ba-Zi Calendar//IT","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+              {(()=>{
+                // ICS builder shared by both buttons
+                function buildICS() {
+                  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ba-Zi Calendar//IT","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Ba-Zi Calendar","X-WR-TIMEZONE:Europe/Rome"];
                   const allEvts = Object.entries(events||{}).flatMap(([dk,evs])=>(evs||[]).map(ev=>({...ev,dk})));
                   const allProm = Object.entries(promemoria||{}).flatMap(([dk,proms])=>(proms||[]).filter(p=>!p.fatto).map(p=>({...p,dk})));
-                  const toICSDate = dk => { const d=new Date(dk); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
+                  const fmt = dk => { const d=new Date(dk); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
+                  const nextDay = dk => { const d=new Date(new Date(dk).getTime()+86400000); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
                   [...allEvts,...allProm].forEach(item=>{
-                    lines.push("BEGIN:VEVENT",`UID:${item.id}@bazicalendar`,`DTSTART;VALUE=DATE:${toICSDate(item.dk)}`,`DTEND;VALUE=DATE:${toICSDate(item.dk)}`,`SUMMARY:${(item.titolo||item.testo||"Evento").replace(/,/g,"\\,")}`,`DESCRIPTION:Ba-Zi Calendar Event`,"END:VEVENT");
+                    const s=(item.titolo||item.testo||"Evento").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
+                    lines.push("BEGIN:VEVENT",`UID:${item.id}@bazicalendar`,`DTSTAMP:${fmt(new Date().toDateString())}T000000Z`,`DTSTART;VALUE=DATE:${fmt(item.dk)}`,`DTEND;VALUE=DATE:${nextDay(item.dk)}`,`SUMMARY:${s}`,"END:VEVENT");
                   });
                   lines.push("END:VCALENDAR");
-                  const blob=new Blob([lines.join("\r\n")],{type:"text/calendar"});
-                  const url=URL.createObjectURL(blob);
-                  const a=document.createElement("a"); a.href=url; a.download="bazi-calendar.ics"; a.click();
-                  URL.revokeObjectURL(url);
-                }} style={{width:"100%",padding:"9px",fontSize:12,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
-                  ⬇️ Esporta come .ics
-                </button>
-              </div>
+                  return lines.join("\r\n");
+                }
+                const count = Object.values(events||{}).flat().length + Object.values(promemoria||{}).flat().filter(p=>!p.fatto).length;
+                return (
+                  <div style={{padding:"14px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)"}}>
+                    <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>📅 Sincronizza con Calendario</div>
+                    <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5,marginBottom:12}}>
+                      Aggiungi i tuoi {count} eventi e promemoria all'app Calendario del telefono. Su iPhone apri il file e scegli "Aggiungi tutti".
+                    </div>
+                    <div style={{display:"flex",gap:8,marginBottom:8}}>
+                      {/* Apple Calendar */}
+                      <button onClick={()=>{
+                        const blob=new Blob([buildICS()],{type:"text/calendar;charset=utf-8"});
+                        const url=URL.createObjectURL(blob);
+                        const a=document.createElement("a"); a.href=url; a.download="bazi-calendar.ics"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }} style={{flex:1,padding:"10px 6px",fontSize:12,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        🍎 Apple Cal
+                      </button>
+                      {/* Google Calendar */}
+                      <button onClick={()=>{
+                        const blob=new Blob([buildICS()],{type:"text/calendar;charset=utf-8"});
+                        const url=URL.createObjectURL(blob);
+                        const a=document.createElement("a"); a.href=url; a.download="bazi-calendar.ics"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        setTimeout(()=>{ window.open("https://calendar.google.com/calendar/r/settings/export","_blank"); URL.revokeObjectURL(url); },500);
+                      }} style={{flex:1,padding:"10px 6px",fontSize:12,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                        🗓 Google Cal
+                      </button>
+                    </div>
+                    <div style={{fontSize:9,color:"var(--text-ter)",textAlign:"center"}}>
+                      💡 Sincronizzazione live in arrivo — per ora importa il file ogni volta che vuoi aggiornare
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <>
