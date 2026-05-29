@@ -96,9 +96,10 @@ const TRONCO_EL = ["legno","legno","fuoco","fuoco","terra","terra","metallo","me
 const RAMO_EL   = ["acqua","terra","legno","legno","terra","fuoco","fuoco","terra","metallo","metallo","terra","acqua"];
 const EL_ORDER  = ["legno","fuoco","terra","metallo","acqua"];
 
-// Element background — light pastel in light mode, dark tint in dark mode
+// Element background — light pastel in light mode, proper dark tint in dark mode
+const ELEMENTI_DARK_BG = { legno:"#111a12", fuoco:"#1a1009", terra:"#1a1709", metallo:"#131314", acqua:"#09101a" };
 function elbg(el, dark) {
-  return dark ? (ELEMENTI[el].colore + "99") : ELEMENTI[el].bg;
+  return dark ? (ELEMENTI_DARK_BG[el] || "#111") : ELEMENTI[el].bg;
 }
 
 function formatDaysAgo(ts) {
@@ -187,7 +188,7 @@ const DEFAULT_ROUTINE_CFG = [
 const DEFAULT_HABIT_CFG = [
   { id:"h1", label:"Acqua",       tipo:"numero", unita:"l",   attiva:true, colore:"#1a5276" },
   { id:"h2", label:"Sonno",       tipo:"tempo",  unita:"h",   attiva:true, colore:"#4a7c59" },
-  { id:"h3", label:"Passi",       tipo:"numero", unita:"",    attiva:true, colore:"#8b6914" },
+  { id:"h3", label:"No fumo",      tipo:"numero", unita:"gg",  attiva:true, colore:"#8b6914", modoSmettere:true },
   { id:"h4", label:"Lettura",     tipo:"tempo",  unita:"min", attiva:true, colore:"#b5451b" },
   { id:"h5", label:"Meditazione", tipo:"tempo",  unita:"min", attiva:true, colore:"#6b7280" },
 ];
@@ -347,21 +348,37 @@ function useLS(key, defaultValue) {
 }
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
-// App logo: green rounded square + taijitu (matches icon.svg)
-function BaziLogo({ size=26, opacity=1 }) {
+// Nav logo: octagon + taijitu, no background, adapts to dark/light mode
+function BaziLogo({ size=28, dark=false, opacity=1 }) {
+  const stroke  = dark ? "#4a7c59"   : "#2C3E2D";
+  const circ    = dark ? "#5a5a5a"   : "#2C3E2D";
+  const yangF   = "#f0ede8";
+  const yinF    = "#2C3E2D";
+  const baseFill= dark ? "#3d3d3d"   : "#f0ede8";
+  const yinOp   = dark ? 0.87 : 0.72;
+  const yangOp  = dark ? 0.82 : 1.0;
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0,opacity}}>
-      <rect x="0" y="0" width="100" height="100" rx="22" fill="#4a7c59"/>
-      {/* Yang half (cream) */}
-      <path d="M50,14 A36,36 0 0,1 50,86 A18,18 0 0,0 50,50 A18,18 0 0,1 50,14 Z" fill="rgba(240,237,232,0.92)"/>
-      {/* Yin half overlay */}
-      <path d="M50,14 A36,36 0 0,0 50,86 A18,18 0 0,1 50,50 A18,18 0 0,0 50,14 Z" fill="rgba(30,46,28,0.28)"/>
-      {/* Light dot in yin area */}
-      <circle cx="50" cy="32" r="9" fill="rgba(240,237,232,0.92)"/>
-      {/* Dark dot in yang area */}
-      <circle cx="50" cy="68" r="9" fill="rgba(30,46,28,0.55)"/>
-      {/* Outer circle border */}
-      <circle cx="50" cy="50" r="36" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
+    <svg viewBox="-32 -32 64 64" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0,opacity}}>
+      {/* Octagon */}
+      <polygon points="0,-28 20,-20 28,0 20,20 0,28 -20,20 -28,0 -20,-20"
+        fill="none" stroke={stroke} strokeWidth="1.2"/>
+      {/* Intermediate circle */}
+      <circle cx="0" cy="0" r="20" fill="none" stroke={circ} strokeWidth="0.6" opacity="0.4"/>
+      {/* Base fill */}
+      <circle cx="0" cy="0" r="16" fill={baseFill} opacity={dark?0.9:0.9}/>
+      {/* Yang half */}
+      <path d="M0,-16 A16,16 0 0,1 0,16 A8,8 0 0,1 0,0 A8,8 0 0,0 0,-16 Z" fill={yangF} opacity={yangOp}/>
+      {/* Yin half */}
+      <path d="M0,-16 A16,16 0 0,0 0,16 A8,8 0 0,0 0,0 A8,8 0 0,1 0,-16 Z" fill={yinF} opacity={yinOp}/>
+      {/* Light dot */}
+      <circle cx="0" cy="-8" r="3.5" fill={yangF} opacity={dark?0.82:0.88}/>
+      {/* Dark dot */}
+      <circle cx="0" cy="8" r="3.5" fill={dark?"#1a1a1a":yinF} opacity={dark?0.90:0.72}/>
+      {/* Circle border + S */}
+      <circle cx="0" cy="0" r="16" fill="none" stroke={circ} strokeWidth="0.8" opacity={dark?0.7:1}/>
+      <path d="M0,-16 A8,8 0 0,1 0,0 A8,8 0 0,0 0,16" fill="none" stroke={circ} strokeWidth="0.8" opacity={dark?0.7:1}/>
+      {/* Green dot */}
+      <circle cx="22" cy="-22" r="3" fill="#4a7c59"/>
     </svg>
   );
 }
@@ -433,20 +450,20 @@ function IconEdit({ size=16, color="var(--text-ter)" }) {
   );
 }
 // Habit type icons (replace ✅ / 🚫)
-function IconCost({ size=15 }) {
+function IconCost({ size=18 }) {
   return (
-    <svg viewBox="0 0 20 20" width={size} height={size} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
-      <circle cx="10" cy="10" r="9" fill="#4a7c59"/>
-      <polyline points="10,13 10,7 7,10" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <line x1="10" y1="7" x2="13" y2="10" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+    <svg viewBox="0 0 24 24" width={size} height={size} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
+      <circle cx="12" cy="12" r="11" fill="#2e7d32"/>
+      <polyline points="12,15 12,8 8.5,11.5" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="12" y1="8" x2="15.5" y2="11.5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   );
 }
-function IconSmett({ size=15 }) {
+function IconSmett({ size=18 }) {
   return (
-    <svg viewBox="0 0 20 20" width={size} height={size} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
-      <circle cx="10" cy="10" r="9" fill="#8b6914"/>
-      <line x1="6" y1="10" x2="14" y2="10" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+    <svg viewBox="0 0 24 24" width={size} height={size} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
+      <circle cx="12" cy="12" r="11" fill="#c0392b"/>
+      <line x1="7" y1="12" x2="17" y2="12" stroke="white" strokeWidth="2.8" strokeLinecap="round"/>
     </svg>
   );
 }
@@ -596,28 +613,31 @@ function EkadashiModal({ onClose, dark }) {
 }
 
 function MoonBodyModal({ currentPhase, currentZodiac, onClose, dark }) {
-  const [segniOpen, setSegniOpen] = useState(false);
   const phases = Object.entries(LUNA_CORPO);
-  const zodiacDesc = [
-    { nome:"Ariete",     tipo:"Frutto",  icon:"🍎", desc:"Alta energia. Ottimo per attività fisica intensa, sport, trattamenti attivi. Raccolta di frutti e cereali." },
-    { nome:"Toro",       tipo:"Radice",  icon:"🥕", desc:"Energia radicata, stabile. Favore per nutrizione profonda, digestione. Pianta bulbi e radici." },
-    { nome:"Gemelli",    tipo:"Fiore",   icon:"🌸", desc:"Mente vivace. Favorisce comunicazione, trattamenti per le vie respiratorie. Per fiori e aromatiche." },
-    { nome:"Cancro",     tipo:"Foglia",  icon:"🥬", desc:"Alta ritenzione idrica. Cura pelle e capelli con maschera idratante. Semina foglie e lattughe." },
-    { nome:"Leone",      tipo:"Frutto",  icon:"🍅", desc:"Vitalità e calore. Trattamenti rigeneranti, capelli brillanti. Vendemmia e raccolta frutti." },
-    { nome:"Vergine",    tipo:"Radice",  icon:"🧅", desc:"Analisi e cura del dettaglio. Depurazione intestinale, manicure. Lavora il suolo e bulbi." },
-    { nome:"Bilancia",   tipo:"Fiore",   icon:"🌻", desc:"Equilibrio e armonia. Trattamenti estetici, profumi, pelle sensibile. Cura dei fiori." },
-    { nome:"Scorpione",  tipo:"Foglia",  icon:"🌿", desc:"Intensità e rigenerazione profonda. Detox, trattamenti anti-cellulite. Erbe medicinali al picco." },
-    { nome:"Sagittario", tipo:"Frutto",  icon:"🍇", desc:"Espansione ed energia. Outdoor e sport. Vendemmia, raccolta olive, frutta secca." },
-    { nome:"Capricorno", tipo:"Radice",  icon:"🌰", desc:"Struttura e resistenza. Ossa e articolazioni. Tartufi, tuberi, potatura invernale." },
-    { nome:"Acquario",   tipo:"Fiore",   icon:"🌼", desc:"Innovazione e socialità. Trattamenti leggeri, circolazione. Semina fiori da taglio." },
-    { nome:"Pesci",      tipo:"Foglia",  icon:"🫧", desc:"Sensibilità e intuizione. Piedi e sistema linfatico. Semina lattughe, attenzione ai funghi." },
-  ];
+  const currentInfo = LUNA_CORPO[currentPhase];
   return (
     <ModalBox onClose={onClose} dark={dark} zIndex={400}>
       <ModalHeader title="🌙 Luna & Corpo" onClose={onClose}/>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        {phases.map(([ph,info])=>{
-          const isCurrent = ph===currentPhase;
+      {/* Current phase card at top */}
+      {currentInfo && (
+        <div style={{marginBottom:12,padding:"12px",background:"var(--accent-22)",borderRadius:12,border:"1px solid var(--accent-44)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <span style={{fontSize:24,lineHeight:1}}>{currentInfo.em}</span>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:"var(--accent)"}}>{currentPhase}</div>
+              <span style={{fontSize:9,background:"var(--accent)",color:"white",borderRadius:4,padding:"1px 7px"}}>oggi</span>
+            </div>
+          </div>
+          {[["🧬",currentInfo.corpo],["🌱",currentInfo.natura],["🧘",currentInfo.psiche]].map(([ico,txt],k)=>(
+            <div key={k} style={{fontSize:11,lineHeight:1.6,color:"var(--text)",marginBottom:2}}>
+              <span style={{marginRight:4}}>{ico}</span>{txt}
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {phases.filter(([ph])=>ph!==currentPhase).map(([ph,info])=>{
+          const isCurrent = false;
           return (
             <div key={ph} style={{borderRadius:10,border:`0.5px solid ${isCurrent?"var(--accent)":"var(--border-ter)"}`,overflow:"hidden",background:isCurrent?(dark?"#0d1f12":"#f0faf3"):"var(--bg-card)"}}>
               <div style={{padding:"8px 12px",background:isCurrent?"var(--accent-22)":"var(--bg-wash)",display:"flex",alignItems:"center",gap:6}}>
@@ -635,38 +655,6 @@ function MoonBodyModal({ currentPhase, currentZodiac, onClose, dark }) {
             </div>
           );
         })}
-        {/* Luna nei segni — collassato di default */}
-        <div style={{borderRadius:10,border:"0.5px solid var(--border-sec)",overflow:"hidden",background:"var(--bg-card)"}}>
-          <div onClick={()=>setSegniOpen(s=>!s)} style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>
-            <span style={{fontSize:16}}>♓</span>
-            <span style={{fontSize:12,fontWeight:600,color:"var(--text)",flex:1}}>Luna nei segni zodiacali</span>
-            {currentZodiac !== undefined && (
-              <span style={{fontSize:10,background:"var(--accent-22)",color:"var(--accent)",borderRadius:5,padding:"1px 7px",fontWeight:500}}>
-                {zodiacDesc[currentZodiac]?.nome}
-              </span>
-            )}
-            <span style={{fontSize:11,color:"var(--text-ter)"}}>{segniOpen?"▲":"▼"}</span>
-          </div>
-          {segniOpen && (
-            <div style={{padding:"0 10px 10px",display:"flex",flexDirection:"column",gap:5}}>
-              {zodiacDesc.map((z,i)=>{
-                const isCurr = i===currentZodiac;
-                return (
-                  <div key={i} style={{padding:"7px 10px",borderRadius:8,background:isCurr?(dark?"#0d1a0d":"#f0faf3"):"var(--bg-wash)",border:`0.5px solid ${isCurr?"#4a7c59":"var(--border-ter)"}`,display:"flex",gap:8,alignItems:"flex-start"}}>
-                    <span style={{fontSize:15,flexShrink:0}}>{z.icon}</span>
-                    <div>
-                      <div style={{fontSize:11,fontWeight:600,color:isCurr?"#4a7c59":"var(--text)",marginBottom:1}}>
-                        {z.nome} — {z.tipo}
-                        {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>ora</span>}
-                      </div>
-                      <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z.desc}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
     </ModalBox>
   );
@@ -1186,7 +1174,7 @@ function HabitChart({ habitId, habitLog }) {
 }
 
 // ── Top Navigation ────────────────────────────────────────────────────────────
-function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
+function TopNav({ view, setView, syncStatus, userEmail, setImpTab, dark=false }) {
   const isUtility = ["routine","habit","todo","memo"].includes(view);
   const isCal = view === "calendario";
   const syncDot = syncStatus==="syncing" ? "#f59e0b" : syncStatus==="synced" ? "#4a7c59" : syncStatus==="error" ? "#e53e3e" : null;
@@ -1201,7 +1189,7 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
           fontWeight:isCal?600:400,userSelect:"none",
           display:"flex",flexDirection:"column",alignItems:"center",
         }}>
-          <BaziLogo size={26} opacity={isCal ? 1 : 0.38}/>
+          <BaziLogo size={28} dark={dark} opacity={isCal ? 1 : 0.38}/>
           <div style={{fontSize:10,marginTop:1}}>Home</div>
         </div>
         {/* Nav items */}
@@ -1506,8 +1494,8 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>🌅 Morning Routine</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label={<><span style={{fontSize:"1em",lineHeight:1}}>⚙️</span> Impostazioni Routine</>} onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
-            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
+            <DotsItem label={"Impostazioni Routine"} onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
+            <DotsItem label={`Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
       </div>
@@ -1643,8 +1631,8 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>📊 Habit Tracker</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label={<><span style={{fontSize:"1em",lineHeight:1}}>⚙️</span> Impostazioni Habit</>} onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
-            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
+            <DotsItem label={"Impostazioni Habit"} onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
+            <DotsItem label={`Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
       </div>
@@ -1784,8 +1772,8 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>✅ To-Do</div>
         <DotsMenu render={close=>(
           <>
-            {activeId && <DotsItem label="📓 Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
-            <DotsItem label={`🗑 Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
+            {activeId && <DotsItem label="Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
+            <DotsItem label={`Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
           </>
         )}/>
       </div>
@@ -2093,17 +2081,6 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
       {section==="calendario" && (
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          {/* Accent color */}
-          <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Colore tema app</div>
-            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-              {Object.entries(ELEMENTI).map(([k,e])=>(
-                <div key={k} onClick={()=>setCfg(c=>({...c,accentColor:e.colore,followDayElement:false}))} style={{width:28,height:28,borderRadius:"50%",background:e.colore,cursor:"pointer",border:(cfg.accentColor===e.colore&&!cfg.followDayElement)?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
-              ))}
-            </div>
-            <Toggle label="Segui elemento del giorno" on={cfg.followDayElement||false} onChange={v=>setCfg(c=>({...c,followDayElement:v}))}/>
-          </div>
-          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           {/* Tronchi Celesti */}
           <div>
             <Toggle label="Mostra 10 Tronchi Celesti (天干)" on={cfg.showTronco!==false} onChange={v=>setCfg(c=>({...c,showTronco:v}))}/>
@@ -2746,6 +2723,7 @@ export default function App() {
   const [conflictData, setConflictData] = useState(null); // {local, remote, resolve}
   const syncTimerRef = useRef(null);
   const remoteListenerRef = useRef(null);
+  const utilSwipeX = useRef(null);
 
   const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,ekNotif:false,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false,tempUnit:"C",distUnit:"km",lat:41.9,lon:12.5,cloudMode:null});
   const [baziPersonal, setBaziPersonal] = useLS("bazi_personal", {data:"",ora:"12"});
@@ -2983,18 +2961,24 @@ export default function App() {
 
   return (
     <div className={dark?"dark":""} style={{fontFamily:"var(--font-sans)",minHeight:"100svh",background:"var(--bg)",color:"var(--text)"}}>
-      <TopNav view={view} setView={setView} syncStatus={syncStatus} userEmail={authUser?.email} setImpTab={setImpTab}/>
+      <TopNav view={view} setView={setView} syncStatus={syncStatus} userEmail={authUser?.email} setImpTab={setImpTab} dark={dark}/>
 
       <div style={{maxWidth:480,margin:"0 auto"}}>
 
         {/* ── Calendario ─────────────────────────────────────── */}
         {view==="calendario" && (
           <div style={{padding:"1rem"}}>
-            {/* Row 1: Anno + Oggi */}
+            {/* Row 1: Anno + Oggi + Cinque Elementi inline */}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none",flex:1,minWidth:0}}>
                 <div style={{fontSize:18,fontWeight:500,color:"var(--text)",letterSpacing:"0.5px"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
                 <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
+                {/* Cinque elementi compact */}
+                <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>
+                  {Object.entries(ELEMENTI).map(([k,e])=>(
+                    <span key={k} onClick={ev=>{ev.stopPropagation();setElModal(k);}} style={{fontSize:9,background:elbg(k,dark),color:dark?"rgba(255,255,255,0.85)":e.colore,borderRadius:4,padding:"1px 5px",border:`0.5px solid ${e.colore}${dark?"77":"44"}`,cursor:"pointer",fontWeight:500,letterSpacing:"0.2px"}}>{e.char} {e.nome}</span>
+                  ))}
+                </div>
               </div>
               <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>Oggi</button>
             </div>
@@ -3031,13 +3015,6 @@ export default function App() {
                 </div>
               );
             })()}
-
-            {/* Legenda elementi */}
-            <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
-              {Object.entries(ELEMENTI).map(([k,e])=>(
-                <span key={k} onClick={()=>setElModal(k)} style={{fontSize:10,background:elbg(k,dark),color:dark?"rgba(255,255,255,0.88)":e.colore,borderRadius:5,padding:"2px 7px",border:`0.5px solid ${e.colore}${dark?"77":"44"}`,cursor:"pointer",fontWeight:500}}>{e.char} {e.nome}</span>
-              ))}
-            </div>
 
             {/* Nav mese */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -3247,10 +3224,25 @@ export default function App() {
           </div>
         )}
 
-        {view==="routine"      && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} setImpTab={setImpTab} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
-        {view==="habit"        && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} setImpTab={setImpTab} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
-        {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
-        {view==="memo"         && <PromemoriaMemoView promemoria={promemoria} setPromemoria={setPromemoria} dark={dark}/>}
+        {["routine","habit","todo","memo"].includes(view) && (
+          <div
+            onTouchStart={e=>{ utilSwipeX.current=e.touches[0].clientX; }}
+            onTouchEnd={e=>{
+              if(utilSwipeX.current===null) return;
+              const dx=e.changedTouches[0].clientX-utilSwipeX.current; utilSwipeX.current=null;
+              if(Math.abs(dx)<55) return;
+              const tabs=["routine","habit","todo","memo"], idx=tabs.indexOf(view);
+              if(dx<0&&idx<tabs.length-1) setView(tabs[idx+1]);
+              if(dx>0&&idx>0) setView(tabs[idx-1]);
+            }}
+            style={{touchAction:"pan-y"}}
+          >
+            {view==="routine" && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} setImpTab={setImpTab} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
+            {view==="habit"   && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} setImpTab={setImpTab} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
+            {view==="todo"    && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
+            {view==="memo"    && <PromemoriaMemoView promemoria={promemoria} setPromemoria={setPromemoria} dark={dark}/>}
+          </div>
+        )}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
         {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} signInWithGoogle={signInWithGoogle} sendPasswordReset={sendPasswordReset} updateUserEmail={updateUserEmail} events={events} promemoria={promemoria}/>}
       </div>

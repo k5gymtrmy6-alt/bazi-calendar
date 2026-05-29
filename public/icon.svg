@@ -1,13 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="42" fill="#4a7c59"/>
-  <!-- Yang half (cream/light) -->
-  <path d="M96,28 A68,68 0 0,1 96,164 A34,34 0 0,0 96,96 A34,34 0 0,1 96,28 Z" fill="rgba(240,237,232,0.92)"/>
-  <!-- Yin half (dark) is the green background showing through -->
-  <path d="M96,28 A68,68 0 0,0 96,164 A34,34 0 0,1 96,96 A34,34 0 0,0 96,28 Z" fill="rgba(30,46,28,0.30)"/>
-  <!-- Light dot in yin half -->
-  <circle cx="96" cy="62" r="17" fill="rgba(240,237,232,0.92)"/>
-  <!-- Dark dot in yang half -->
-  <circle cx="96" cy="130" r="17" fill="rgba(30,46,28,0.55)"/>
-  <!-- Outer circle border -->
-  <circle cx="96" cy="96" r="68" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="3"/>
+  <rect width="192" height="192" rx="42" fill="#1a1a1a"/>
+  <!-- Octagon -->
+  <polygon points="96,14 149,35 170,96 149,157 96,178 43,157 22,96 43,35"
+    fill="none" stroke="#4a7c59" stroke-width="2.5"/>
+  <!-- Intermediate circle -->
+  <circle cx="96" cy="96" r="58" fill="none" stroke="#3d3d3d" stroke-width="1.2"/>
+  <!-- Base circle -->
+  <circle cx="96" cy="96" r="44" fill="#3d3d3d" opacity="0.9"/>
+  <!-- Yang half (cream) -->
+  <path d="M96,52 A44,44 0 0,1 96,140 A22,22 0 0,1 96,96 A22,22 0 0,0 96,52 Z"
+    fill="#f0ede8" opacity="0.82"/>
+  <!-- Yin half (dark) -->
+  <path d="M96,52 A44,44 0 0,0 96,140 A22,22 0 0,0 96,96 A22,22 0 0,1 96,52 Z"
+    fill="#2C3E2D" opacity="0.87"/>
+  <!-- Light dot in yin area -->
+  <circle cx="96" cy="74" r="10" fill="#f0ede8" opacity="0.82"/>
+  <!-- Dark dot in yang area -->
+  <circle cx="96" cy="118" r="10" fill="#1a1a1a" opacity="0.90"/>
+  <!-- Circle border -->
+  <circle cx="96" cy="96" r="44" fill="none" stroke="#5a5a5a" stroke-width="1.5"/>
+  <!-- S-curve divider -->
+  <path d="M96,52 A22,22 0 0,1 96,96 A22,22 0 0,0 96,140"
+    fill="none" stroke="#5a5a5a" stroke-width="1.5"/>
+  <!-- Green accent dot -->
+  <circle cx="148" cy="44" r="8" fill="#4a7c59"/>
 </svg>
