@@ -347,19 +347,106 @@ function useLS(key, defaultValue) {
 }
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
+// App logo: green rounded square + taijitu (matches icon.svg)
 function BaziLogo({ size=26, opacity=1 }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0,opacity}}>
-      {/* Yin (sage green) background circle */}
-      <circle cx="50" cy="50" r="46" fill="#5d6b56"/>
+      <rect x="0" y="0" width="100" height="100" rx="22" fill="#4a7c59"/>
       {/* Yang half (cream) */}
-      <path d="M50,4 A46,46 0 0,1 50,96 A23,23 0 0,0 50,50 A23,23 0 0,1 50,4 Z" fill="#edeae3"/>
-      {/* Light dot in yin half (upper) */}
-      <circle cx="50" cy="27" r="11" fill="#edeae3"/>
-      {/* Dark dot in yang half (lower) */}
-      <circle cx="50" cy="73" r="13" fill="#1e2d1c"/>
-      {/* Outer border */}
-      <circle cx="50" cy="50" r="46" fill="none" stroke="#2C3E2D" strokeWidth="4"/>
+      <path d="M50,14 A36,36 0 0,1 50,86 A18,18 0 0,0 50,50 A18,18 0 0,1 50,14 Z" fill="rgba(240,237,232,0.92)"/>
+      {/* Yin half overlay */}
+      <path d="M50,14 A36,36 0 0,0 50,86 A18,18 0 0,1 50,50 A18,18 0 0,0 50,14 Z" fill="rgba(30,46,28,0.28)"/>
+      {/* Light dot in yin area */}
+      <circle cx="50" cy="32" r="9" fill="rgba(240,237,232,0.92)"/>
+      {/* Dark dot in yang area */}
+      <circle cx="50" cy="68" r="9" fill="rgba(30,46,28,0.55)"/>
+      {/* Outer circle border */}
+      <circle cx="50" cy="50" r="36" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
+    </svg>
+  );
+}
+
+// Ba-Zi tab icon — clean yin-yang outline, size-controlled
+function IconBaZi({ size=28 }) {
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
+      {/* Outer circle */}
+      <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="5"/>
+      {/* Yin half fill */}
+      <path d="M50,6 A44,44 0 0,0 50,94 A22,22 0 0,1 50,50 A22,22 0 0,0 50,6 Z" fill="currentColor"/>
+      {/* Light dot */}
+      <circle cx="50" cy="28" r="10" fill="currentColor" opacity="0.12"/>
+      <circle cx="50" cy="28" r="10" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+      {/* Dark dot */}
+      <circle cx="50" cy="72" r="10" fill="currentColor"/>
+    </svg>
+  );
+}
+
+// Sub-utility icons
+function IconRoutine({ size=20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
+      <circle cx="12" cy="12" r="4"/>
+      <line x1="12" y1="2" x2="12" y2="5"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="5" y2="12"/>
+      <line x1="19" y1="12" x2="22" y2="12"/>
+      <line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/>
+      <line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/>
+      <line x1="19.07" y1="4.93" x2="16.95" y2="7.05"/>
+      <line x1="7.05" y1="16.95" x2="4.93" y2="19.07"/>
+    </svg>
+  );
+}
+function IconHabit({ size=20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{display:"block"}}>
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12,7 L12,12 L15,15" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IconTodo({ size=20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
+      <polyline points="9,11 12,14 22,4"/>
+      <path d="M21,12v7a2,2,0,0,1-2,2H5a2,2,0,0,1-2-2V5a2,2,0,0,1,2-2h11"/>
+    </svg>
+  );
+}
+function IconMemo({ size=20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  );
+}
+// Edit icon (replaces ✏️)
+function IconEdit({ size=16, color="var(--text-ter)" }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  );
+}
+// Habit type icons (replace ✅ / 🚫)
+function IconCost({ size=15 }) {
+  return (
+    <svg viewBox="0 0 20 20" width={size} height={size} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
+      <circle cx="10" cy="10" r="9" fill="#4a7c59"/>
+      <polyline points="10,13 10,7 7,10" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="10" y1="7" x2="13" y2="10" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconSmett({ size=15 }) {
+  return (
+    <svg viewBox="0 0 20 20" width={size} height={size} style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}>
+      <circle cx="10" cy="10" r="9" fill="#8b6914"/>
+      <line x1="6" y1="10" x2="14" y2="10" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   );
 }
@@ -508,8 +595,23 @@ function EkadashiModal({ onClose, dark }) {
   );
 }
 
-function MoonBodyModal({ currentPhase, onClose, dark }) {
+function MoonBodyModal({ currentPhase, currentZodiac, onClose, dark }) {
+  const [segniOpen, setSegniOpen] = useState(false);
   const phases = Object.entries(LUNA_CORPO);
+  const zodiacDesc = [
+    { nome:"Ariete",     tipo:"Frutto",  icon:"🍎", desc:"Alta energia. Ottimo per attività fisica intensa, sport, trattamenti attivi. Raccolta di frutti e cereali." },
+    { nome:"Toro",       tipo:"Radice",  icon:"🥕", desc:"Energia radicata, stabile. Favore per nutrizione profonda, digestione. Pianta bulbi e radici." },
+    { nome:"Gemelli",    tipo:"Fiore",   icon:"🌸", desc:"Mente vivace. Favorisce comunicazione, trattamenti per le vie respiratorie. Per fiori e aromatiche." },
+    { nome:"Cancro",     tipo:"Foglia",  icon:"🥬", desc:"Alta ritenzione idrica. Cura pelle e capelli con maschera idratante. Semina foglie e lattughe." },
+    { nome:"Leone",      tipo:"Frutto",  icon:"🍅", desc:"Vitalità e calore. Trattamenti rigeneranti, capelli brillanti. Vendemmia e raccolta frutti." },
+    { nome:"Vergine",    tipo:"Radice",  icon:"🧅", desc:"Analisi e cura del dettaglio. Depurazione intestinale, manicure. Lavora il suolo e bulbi." },
+    { nome:"Bilancia",   tipo:"Fiore",   icon:"🌻", desc:"Equilibrio e armonia. Trattamenti estetici, profumi, pelle sensibile. Cura dei fiori." },
+    { nome:"Scorpione",  tipo:"Foglia",  icon:"🌿", desc:"Intensità e rigenerazione profonda. Detox, trattamenti anti-cellulite. Erbe medicinali al picco." },
+    { nome:"Sagittario", tipo:"Frutto",  icon:"🍇", desc:"Espansione ed energia. Outdoor e sport. Vendemmia, raccolta olive, frutta secca." },
+    { nome:"Capricorno", tipo:"Radice",  icon:"🌰", desc:"Struttura e resistenza. Ossa e articolazioni. Tartufi, tuberi, potatura invernale." },
+    { nome:"Acquario",   tipo:"Fiore",   icon:"🌼", desc:"Innovazione e socialità. Trattamenti leggeri, circolazione. Semina fiori da taglio." },
+    { nome:"Pesci",      tipo:"Foglia",  icon:"🫧", desc:"Sensibilità e intuizione. Piedi e sistema linfatico. Semina lattughe, attenzione ai funghi." },
+  ];
   return (
     <ModalBox onClose={onClose} dark={dark} zIndex={400}>
       <ModalHeader title="🌙 Luna & Corpo" onClose={onClose}/>
@@ -533,6 +635,38 @@ function MoonBodyModal({ currentPhase, onClose, dark }) {
             </div>
           );
         })}
+        {/* Luna nei segni — collassato di default */}
+        <div style={{borderRadius:10,border:"0.5px solid var(--border-sec)",overflow:"hidden",background:"var(--bg-card)"}}>
+          <div onClick={()=>setSegniOpen(s=>!s)} style={{padding:"10px 12px",display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>
+            <span style={{fontSize:16}}>♓</span>
+            <span style={{fontSize:12,fontWeight:600,color:"var(--text)",flex:1}}>Luna nei segni zodiacali</span>
+            {currentZodiac !== undefined && (
+              <span style={{fontSize:10,background:"var(--accent-22)",color:"var(--accent)",borderRadius:5,padding:"1px 7px",fontWeight:500}}>
+                {zodiacDesc[currentZodiac]?.nome}
+              </span>
+            )}
+            <span style={{fontSize:11,color:"var(--text-ter)"}}>{segniOpen?"▲":"▼"}</span>
+          </div>
+          {segniOpen && (
+            <div style={{padding:"0 10px 10px",display:"flex",flexDirection:"column",gap:5}}>
+              {zodiacDesc.map((z,i)=>{
+                const isCurr = i===currentZodiac;
+                return (
+                  <div key={i} style={{padding:"7px 10px",borderRadius:8,background:isCurr?(dark?"#0d1a0d":"#f0faf3"):"var(--bg-wash)",border:`0.5px solid ${isCurr?"#4a7c59":"var(--border-ter)"}`,display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <span style={{fontSize:15,flexShrink:0}}>{z.icon}</span>
+                    <div>
+                      <div style={{fontSize:11,fontWeight:600,color:isCurr?"#4a7c59":"var(--text)",marginBottom:1}}>
+                        {z.nome} — {z.tipo}
+                        {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>ora</span>}
+                      </div>
+                      <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </ModalBox>
   );
@@ -1068,12 +1202,12 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
           display:"flex",flexDirection:"column",alignItems:"center",
         }}>
           <BaziLogo size={26} opacity={isCal ? 1 : 0.38}/>
-          <div style={{fontSize:10,marginTop:1}}>Calendario</div>
+          <div style={{fontSize:10,marginTop:1}}>Home</div>
         </div>
         {/* Nav items */}
         {[
           {k:"utility",     label:"Utility",   ico:<IconUtility size={26}/>},
-          {k:"bazi",        label:"Ba-Zi",     ico:<span style={{fontSize:25,lineHeight:1,display:"block"}}>☯</span>},
+          {k:"bazi",        label:"Ba-Zi",     ico:<IconBaZi size={28}/>},
           {k:"impostazioni",label:"Impostaz.", ico:<IconImpostazioni size={26}/>},
         ].map(({k,label,ico})=>{
           const active = k==="utility" ? isUtility : view===k;
@@ -1087,7 +1221,7 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
                       color:active?"var(--accent)":"var(--text-sub)",
                       borderBottom:active?"2px solid var(--accent)":"2px solid transparent",
                       fontWeight:active?600:400,userSelect:"none",
-                      opacity: k==="bazi"&&!active ? 0.38 : 1,
+                      opacity: !active ? 0.38 : 1,
                       display:"flex",flexDirection:"column",alignItems:"center"}}>
               {ico}
               <div style={{fontSize:10,marginTop:1}}>{label}</div>
@@ -1108,7 +1242,12 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
       </div>
       {isUtility && (
         <div style={{display:"flex",padding:"6px 10px",background:"var(--bg-card)",borderBottom:"0.5px solid var(--border-ter)",maxWidth:480,margin:"0 auto",gap:6}}>
-          {[{k:"routine",l:"Routine",ico:"🌅"},{k:"habit",l:"Habit",ico:"📊"},{k:"todo",l:"To-Do",ico:"✅"},{k:"memo",l:"Memo",ico:"🔔"}].map(({k,l,ico})=>(
+          {[
+            {k:"routine",l:"Routine",ico:<IconRoutine size={20}/>},
+            {k:"habit",  l:"Habit",  ico:<IconHabit size={20}/>},
+            {k:"todo",   l:"To-Do",  ico:<IconTodo size={20}/>},
+            {k:"memo",   l:"Memo",   ico:<IconMemo size={20}/>},
+          ].map(({k,l,ico})=>(
             <button key={k} onClick={()=>setView(k)} style={{
               flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
               padding:"6px 2px",borderRadius:12,border:"none",cursor:"pointer",
@@ -1116,7 +1255,7 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
               color:view===k?"white":"var(--text-ter)",
               fontWeight:view===k?600:400,transition:"background 0.15s",
             }}>
-              <span style={{fontSize:18,lineHeight:1}}>{ico}</span>
+              {ico}
               <span style={{fontSize:10,lineHeight:1}}>{l}</span>
             </button>
           ))}
@@ -2065,7 +2204,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <div style={{fontSize:12,fontWeight:500,color:task.attiva?"var(--text)":"var(--text-sub)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.label}</div>
                   <div style={{fontSize:9,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?"rip.":"min"}</div>
                 </div>
-                <button onClick={()=>{setEditingTask(task.id);setEditLabel(task.label);setEditDur(task.durata);setEditTipo(tipo);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:13,cursor:"pointer",padding:"0 1px",lineHeight:1}}>✏️</button>
+                <button onClick={()=>{setEditingTask(task.id);setEditLabel(task.label);setEditDur(task.durata);setEditTipo(tipo);}} style={{background:"none",border:"none",cursor:"pointer",padding:"2px",lineHeight:1,display:"flex",alignItems:"center"}}><IconEdit size={15}/></button>
                 <button onClick={()=>{setRoutineDeleted(prev=>[...cleanOld(prev),{...task,deletedAt:Date.now()}]);setRoutineCfg(prev=>prev.filter(t=>t.id!==task.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 1px",lineHeight:1}}>×</button>
               </div>
             );
@@ -2091,7 +2230,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
       {section==="habit" && (
         <div>
-          <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Definisci i tuoi habit. Tieni ≡ per riordinare, ✏️ per modificare o cambiare tipo.</div>
+          <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Definisci i tuoi habit. Tieni ≡ per riordinare, icona matita per modificare o cambiare tipo.</div>
           <SortableList items={habitCfg} onReorder={setHabitCfg} renderItem={(habit, _i, dragHandle) => {
             const hc = habit.colore||HABIT_COLORS[0];
             if (editingHabit === habit.id) return (
@@ -2104,7 +2243,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   {HABIT_COLORS.map(c=>(<div key={c} onClick={()=>setEditHColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:editHColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0}}/>))}
                 </div>
                 <div style={{display:"flex",gap:4,marginBottom:10}}>
-                  {[{k:false,ico:"✅",l:"Costruire",desc:"streak = giorni con"},{k:true,ico:"🚫",l:"Smettere",desc:"streak = giorni senza"}].map(({k,ico,l,desc})=>(
+                  {[{k:false,ico:<IconCost size={18}/>,l:"Costruire",desc:"streak = giorni con"},{k:true,ico:<IconSmett size={18}/>,l:"Smettere",desc:"streak = giorni senza"}].map(({k,ico,l,desc})=>(
                     <div key={String(k)} onClick={()=>setEditHSmettere(k)} style={{
                       flex:1,textAlign:"center",padding:"8px 4px",borderRadius:8,cursor:"pointer",
                       background:editHSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
@@ -2137,9 +2276,9 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 <div style={{width:8,height:8,borderRadius:"50%",background:hc,flexShrink:0}}/>
                 {/* Indicatore tipo — solo icona, nessun testo */}
                 <span style={{fontSize:15,flexShrink:0,opacity:0.65}} title={habit.modoSmettere?"Smettere (streak=giorni senza)":"Costruire (streak=giorni con)"}>
-                  {habit.modoSmettere?"🚫":"✅"}
+                  {habit.modoSmettere?<IconSmett size={16}/>:<IconCost size={16}/>}
                 </span>
-                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);setEditHSmettere(habit.modoSmettere||false);}} style={{background:"none",border:"none",color:"var(--text-ter)",fontSize:13,cursor:"pointer",padding:"0 1px",lineHeight:1}}>✏️</button>
+                <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);setEditHSmettere(habit.modoSmettere||false);}} style={{background:"none",border:"none",cursor:"pointer",padding:"2px",lineHeight:1,display:"flex",alignItems:"center"}}><IconEdit size={15}/></button>
                 <button onClick={()=>{setHabitDeleted(prev=>[...cleanOld(prev),{...habit,deletedAt:Date.now()}]);setHabitCfg(prev=>prev.filter(h=>h.id!==habit.id));}} style={{background:"none",border:"none",color:"var(--text-dim)",fontSize:18,cursor:"pointer",padding:"0 1px",lineHeight:1}}>×</button>
               </div>
             );
@@ -2157,7 +2296,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             </div>
             {/* Tipo: costruire vs eliminare */}
             <div style={{display:"flex",gap:4,marginBottom:10}}>
-              {[{k:false,ico:"✅",l:"Costruire"},{k:true,ico:"🚫",l:"Smettere"}].map(({k,ico,l})=>(
+              {[{k:false,ico:<IconCost size={16}/>,l:"Costruire"},{k:true,ico:<IconSmett size={16}/>,l:"Smettere"}].map(({k,ico,l})=>(
                 <div key={String(k)} onClick={()=>setNewHabitSmettere(k)} style={{
                   flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",
                   background:newHabitSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
@@ -3173,7 +3312,7 @@ export default function App() {
       {annoModal    && <AnnoModal anno={anno} byYear={byYear} onClose={()=>setAnnoModal(false)} dark={dark}/>}
       {elModal      && <ElementoModal el={elModal} onClose={()=>setElModal(null)} dark={dark}/>}
       {ekModal      && <EkadashiModal onClose={()=>setEkModal(false)} dark={dark}/>}
-      {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
+      {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} currentZodiac={lunaZodiac(oggi)} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
       {agriModal && <AgricolturaModal meseGrego={mese.start.getMonth()} moonPhaseStr={moonName(moonPhase(oggi))} zodiacIdx={lunaZodiac(oggi)} onClose={()=>setAgriModal(false)} dark={dark}/>}
     </div>
   );

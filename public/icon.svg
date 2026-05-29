@@ -1,4 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="40" fill="#4a7c59"/>
-  <text x="96" y="120" font-size="100" text-anchor="middle" fill="white" font-family="serif">☯</text>
+  <rect width="192" height="192" rx="42" fill="#4a7c59"/>
+  <!-- Yang half (cream/light) -->
+  <path d="M96,28 A68,68 0 0,1 96,164 A34,34 0 0,0 96,96 A34,34 0 0,1 96,28 Z" fill="rgba(240,237,232,0.92)"/>
+  <!-- Yin half (dark) is the green background showing through -->
+  <path d="M96,28 A68,68 0 0,0 96,164 A34,34 0 0,1 96,96 A34,34 0 0,0 96,28 Z" fill="rgba(30,46,28,0.30)"/>
+  <!-- Light dot in yin half -->
+  <circle cx="96" cy="62" r="17" fill="rgba(240,237,232,0.92)"/>
+  <!-- Dark dot in yang half -->
+  <circle cx="96" cy="130" r="17" fill="rgba(30,46,28,0.55)"/>
+  <!-- Outer circle border -->
+  <circle cx="96" cy="96" r="68" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="3"/>
 </svg>
