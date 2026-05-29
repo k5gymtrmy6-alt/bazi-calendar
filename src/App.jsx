@@ -348,37 +348,20 @@ function useLS(key, defaultValue) {
 }
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
-// Nav logo: octagon + taijitu, no background, adapts to dark/light mode
-function BaziLogo({ size=28, dark=false, opacity=1 }) {
-  const stroke  = dark ? "#4a7c59"   : "#2C3E2D";
-  const circ    = dark ? "#5a5a5a"   : "#2C3E2D";
-  const yangF   = "#f0ede8";
-  const yinF    = "#2C3E2D";
-  const baseFill= dark ? "#3d3d3d"   : "#f0ede8";
-  const yinOp   = dark ? 0.87 : 0.72;
-  const yangOp  = dark ? 0.82 : 1.0;
+// Nav logo: solo taijitu, nessun ottagono, usa currentColor (adattivo come gli altri tab)
+function BaziLogo({ size=28 }) {
   return (
-    <svg viewBox="-32 -32 64 64" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0,opacity}}>
-      {/* Octagon */}
-      <polygon points="0,-28 20,-20 28,0 20,20 0,28 -20,20 -28,0 -20,-20"
-        fill="none" stroke={stroke} strokeWidth="1.2"/>
-      {/* Intermediate circle */}
-      <circle cx="0" cy="0" r="20" fill="none" stroke={circ} strokeWidth="0.6" opacity="0.4"/>
-      {/* Base fill */}
-      <circle cx="0" cy="0" r="16" fill={baseFill} opacity={dark?0.9:0.9}/>
-      {/* Yang half */}
-      <path d="M0,-16 A16,16 0 0,1 0,16 A8,8 0 0,1 0,0 A8,8 0 0,0 0,-16 Z" fill={yangF} opacity={yangOp}/>
-      {/* Yin half */}
-      <path d="M0,-16 A16,16 0 0,0 0,16 A8,8 0 0,0 0,0 A8,8 0 0,1 0,-16 Z" fill={yinF} opacity={yinOp}/>
-      {/* Light dot */}
-      <circle cx="0" cy="-8" r="3.5" fill={yangF} opacity={dark?0.82:0.88}/>
-      {/* Dark dot */}
-      <circle cx="0" cy="8" r="3.5" fill={dark?"#1a1a1a":yinF} opacity={dark?0.90:0.72}/>
-      {/* Circle border + S */}
-      <circle cx="0" cy="0" r="16" fill="none" stroke={circ} strokeWidth="0.8" opacity={dark?0.7:1}/>
-      <path d="M0,-16 A8,8 0 0,1 0,0 A8,8 0 0,0 0,16" fill="none" stroke={circ} strokeWidth="0.8" opacity={dark?0.7:1}/>
-      {/* Green dot */}
-      <circle cx="22" cy="-22" r="3" fill="#4a7c59"/>
+    <svg viewBox="-22 -22 44 44" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
+      {/* Yang half background (shows nav bg through) */}
+      <circle cx="0" cy="0" r="20" fill="var(--bg)"/>
+      {/* Yin half (currentColor — si colora col tema attivo) */}
+      <path d="M0,-20 A20,20 0 0,0 0,20 A10,10 0 0,1 0,0 A10,10 0 0,0 0,-20 Z" fill="currentColor"/>
+      {/* Light dot in yin area */}
+      <circle cx="0" cy="-10" r="4.5" fill="var(--bg)"/>
+      {/* Dark dot in yang area */}
+      <circle cx="0" cy="10" r="4.5" fill="currentColor"/>
+      {/* Outer circle */}
+      <circle cx="0" cy="0" r="20" fill="none" stroke="currentColor" strokeWidth="1.5"/>
     </svg>
   );
 }
@@ -526,9 +509,9 @@ function DotsMenu({ render }) {
     </div>
   );
 }
-function DotsItem({ label, onClick, color, sep }) {
+function DotsItem({ label, onClick, color }) {
   return (
-    <div onClick={onClick} style={{padding:"12px 16px",fontSize:13,cursor:"pointer",color:color||"var(--text)",borderTop:sep?"0.5px solid var(--border-ter)":"none",display:"flex",alignItems:"center",gap:8,WebkitTapHighlightColor:"transparent"}}>
+    <div onClick={onClick} style={{padding:"13px 18px",fontSize:14,cursor:"pointer",color:color||"var(--text)",borderTop:"0.5px solid var(--border-ter)",display:"flex",alignItems:"center",gap:8,WebkitTapHighlightColor:"transparent"}}>
       {label}
     </div>
   );
@@ -664,6 +647,7 @@ function AgricolturaModal({ meseGrego, moonPhaseStr, zodiacIdx, onClose, dark })
   const mData = AGRICOLTURA_MESI[meseGrego] || AGRICOLTURA_MESI[0];
   const lunaAgri = LUNA_AGRICOLTURA[moonPhaseStr] || LUNA_AGRICOLTURA["Crescente"];
   const zodAgri = LUNA_ZODIACO_AGRI[zodiacIdx] || LUNA_ZODIACO_AGRI[0];
+  const [zodiacOpen, setZodiacOpen] = useState(false);
   return (
     <ModalBox onClose={onClose} zIndex={400} elKey="legno" dark={dark}>
       <ModalHeader title={`🌱 Agricoltura — ${mData.nome}`} onClose={onClose}/>
@@ -689,33 +673,35 @@ function AgricolturaModal({ meseGrego, moonPhaseStr, zodiacIdx, onClose, dark })
           </div>
         ))}
       </div>
-      {/* Today's zodiac */}
-      <div style={{marginBottom:14,padding:"10px 12px",background:dark?"#1a1a0d":"#fffbeb",borderRadius:10,border:"0.5px solid #8b691433"}}>
-        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+      {/* Today's zodiac — tocca per vedere la guida completa */}
+      <div onClick={()=>setZodiacOpen(s=>!s)} style={{marginBottom:zodiacOpen?8:0,padding:"10px 12px",background:dark?"#1a1a0d":"#fffbeb",borderRadius:10,border:`1px solid ${zodiacOpen?"#8b6914":"#8b691433"}`,cursor:"pointer",userSelect:"none"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontSize:16}}>{zodAgri.icon}</span>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>Oggi — Luna in {zodAgri.tipo}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--text)",flex:1}}>Oggi — Luna in {zodAgri.tipo}</span>
+          <span style={{fontSize:11,color:"var(--text-ter)"}}>{zodiacOpen?"▲":"▼ guida"}</span>
         </div>
-        <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6}}>{zodAgri.desc}</div>
+        <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6,marginTop:4}}>{zodAgri.desc}</div>
       </div>
-      {/* Full zodiac guide */}
-      <div style={{fontSize:11,fontWeight:600,color:"var(--text-sec)",marginBottom:6}}>🔭 Luna nei segni — guida completa</div>
-      <div style={{display:"flex",flexDirection:"column",gap:5}}>
-        {Object.entries(LUNA_ZODIACO_AGRI).map(([idx,z])=>{
-          const isCurr = parseInt(idx)===zodiacIdx;
-          return (
-            <div key={idx} style={{padding:"7px 10px",borderRadius:8,background:isCurr?(dark?"#1a2a0a":"#f0faf3"):"var(--bg-card)",border:`0.5px solid ${isCurr?"#4a7c59":"var(--border-ter)"}`,display:"flex",gap:8,alignItems:"flex-start"}}>
-              <span style={{fontSize:14,flexShrink:0}}>{z.icon}</span>
-              <div>
-                <div style={{fontSize:11,fontWeight:600,color:isCurr?"#4a7c59":"var(--text)",marginBottom:1}}>
-                  {["Ariete","Toro","Gemelli","Cancro","Leone","Vergine","Bilancia","Scorpione","Sagittario","Capricorno","Acquario","Pesci"][parseInt(idx)]} — {z.tipo}
-                  {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>ora</span>}
+      {/* Full zodiac guide — espandibile al tap */}
+      {zodiacOpen && (
+        <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:4}}>
+          {Object.entries(LUNA_ZODIACO_AGRI).map(([idx,z])=>{
+            const isCurr = parseInt(idx)===zodiacIdx;
+            return (
+              <div key={idx} style={{padding:"7px 10px",borderRadius:8,background:isCurr?(dark?"#1a2a0a":"#f0faf3"):"var(--bg-card)",border:`0.5px solid ${isCurr?"#4a7c59":"var(--border-ter)"}`,display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:14,flexShrink:0}}>{z.icon}</span>
+                <div>
+                  <div style={{fontSize:11,fontWeight:600,color:isCurr?"#4a7c59":"var(--text)",marginBottom:1}}>
+                    {["Ariete","Toro","Gemelli","Cancro","Leone","Vergine","Bilancia","Scorpione","Sagittario","Capricorno","Acquario","Pesci"][parseInt(idx)]} — {z.tipo}
+                    {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>ora</span>}
+                  </div>
+                  <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z.desc}</div>
                 </div>
-                <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z.desc}</div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </ModalBox>
   );
 }
@@ -1187,9 +1173,10 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab, dark=false })
           color:isCal?"var(--accent)":"var(--text-sub)",
           borderBottom:isCal?"2px solid var(--accent)":"2px solid transparent",
           fontWeight:isCal?600:400,userSelect:"none",
+          opacity: isCal ? 1 : 0.38,
           display:"flex",flexDirection:"column",alignItems:"center",
         }}>
-          <BaziLogo size={28} dark={dark} opacity={isCal ? 1 : 0.38}/>
+          <BaziLogo size={28}/>
           <div style={{fontSize:10,marginTop:1}}>Home</div>
         </div>
         {/* Nav items */}
@@ -1947,7 +1934,7 @@ function SortableList({ items, onReorder, renderItem }) {
 }
 
 // ── Impostazioni ──────────────────────────────────────────────────────────────
-function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, signInEmail, createAccount, signOutUser, signInAnon, signInWithGoogle, sendPasswordReset, updateUserEmail, events, promemoria }) {
+function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, syncMsg, signInEmail, createAccount, signOutUser, signInAnon, signInWithGoogle, sendPasswordReset, updateUserEmail, events, promemoria }) {
   const dark = cfg.darkMode || false;
   const [section, setSection] = useState(defaultSection);
   const [authMode, setAuthMode] = useState("login"); // login | register
@@ -1957,6 +1944,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
   const [showPwd, setShowPwd] = useState(false);
   const [authErr, setAuthErr] = useState("");
   const [authMsg, setAuthMsg] = useState(""); // success message
+  const [confirmReset, setConfirmReset] = useState(false);
   // Change email form
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -2336,29 +2324,44 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 /* Loggato */
                 <>
                   <div style={{padding:"14px 16px",background:"var(--accent-bg)",borderRadius:12,border:"0.5px solid var(--accent-border)"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
                       <div style={{width:36,height:36,borderRadius:"50%",background:"var(--accent)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:600,flexShrink:0}}>
                         {authUser.email ? authUser.email[0].toUpperCase() : "👤"}
                       </div>
                       <div>
                         <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{authUser.email || "Utente anonimo"}</div>
-                        <div style={{fontSize:11,color:"var(--text-sec)",marginTop:2}}>
-                          {syncStatus==="synced"?"✅ sincronizzato":syncStatus==="syncing"?"⏳ in corso…":syncStatus==="error"?"❌ errore":"◯ offline"}
-                        </div>
                       </div>
+                    </div>
+                    {/* Sync status with detail message */}
+                    <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",background:"var(--bg-wash)",borderRadius:6}}>
+                      <div style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:syncStatus==="synced"?"#4a7c59":syncStatus==="syncing"?"#f59e0b":syncStatus==="error"?"#e53e3e":"#9a9690"}}/>
+                      <span style={{fontSize:11,color:"var(--text-sec)",flex:1}}>
+                        {syncMsg || (syncStatus==="synced"?"Sincronizzato":syncStatus==="syncing"?"In corso…":syncStatus==="error"?"Errore di connessione":"Offline")}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Reset password */}
+                  {/* Reset password — con conferma */}
                   {authUser.email && (
-                    <button onClick={async()=>{
-                      try {
-                        await sendPasswordReset(authUser.email);
-                        setAuthMsg("Email inviata a " + authUser.email);
-                      } catch(e) { setAuthErr(e.message||"Errore"); }
-                    }} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",textAlign:"left"}}>
-                      🔑 Reimposta password (via email)
-                    </button>
+                    !confirmReset ? (
+                      <button onClick={()=>setConfirmReset(true)} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",textAlign:"left"}}>
+                        Reimposta password (via email)
+                      </button>
+                    ) : (
+                      <div style={{padding:"12px",background:"var(--bg-wash)",borderRadius:8,border:"0.5px solid var(--border-sec)"}}>
+                        <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8,lineHeight:1.5}}>
+                          Invieremo un'email di reset a <strong>{authUser.email}</strong>. Continuare?
+                        </div>
+                        <div style={{display:"flex",gap:8}}>
+                          <button onClick={()=>setConfirmReset(false)} style={{flex:1,padding:"7px",fontSize:12,background:"var(--bg-sec)",color:"var(--text-sec)",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer"}}>Annulla</button>
+                          <button onClick={async()=>{
+                            try { await sendPasswordReset(authUser.email); setAuthMsg("Email inviata!"); }
+                            catch(e) { setAuthErr(e.message||"Errore"); }
+                            setConfirmReset(false);
+                          }} style={{flex:1,padding:"7px",fontSize:12,background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer",fontWeight:500}}>Conferma</button>
+                        </div>
+                      </div>
+                    )
                   )}
 
                   {/* Change email */}
@@ -2720,10 +2723,14 @@ export default function App() {
   // Auth + sync state
   const [authUser, setAuthUser] = useState(null);
   const [syncStatus, setSyncStatus] = useState("offline"); // offline|syncing|synced|error
-  const [conflictData, setConflictData] = useState(null); // {local, remote, resolve}
+  const [syncMsg, setSyncMsg] = useState(""); // descriptive status message
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [conflictData, setConflictData] = useState(null); // {remote, offline, localCounts}
   const syncTimerRef = useRef(null);
   const remoteListenerRef = useRef(null);
   const utilSwipeX = useRef(null);
+  const utilSwipeY = useRef(null);
+  const utilSwipeDir = useRef(null); // 'h' | 'v' | null
 
   const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,ekNotif:false,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false,tempUnit:"C",distUnit:"km",lat:41.9,lon:12.5,cloudMode:null});
   const [baziPersonal, setBaziPersonal] = useLS("bazi_personal", {data:"",ora:"12"});
@@ -2827,6 +2834,42 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[cfg.ekNotif, oggi.toDateString()]);
 
+  // ── Utility swipe detection (robust: passive:false, captures horizontal before scroll) ──
+  useEffect(()=>{
+    const TABS = ["routine","habit","todo","memo"];
+    if (!TABS.includes(view)) return;
+    const el = document.getElementById('util-swipe-area');
+    if (!el) return;
+    let sx = null, sy = null, dir = null;
+    const onStart = e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; dir = null; };
+    const onMove = e => {
+      if (sx === null) return;
+      const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+      if (!dir) { if (Math.abs(dx) > Math.abs(dy) + 5) dir = 'h'; else if (Math.abs(dy) > Math.abs(dx) + 5) dir = 'v'; }
+      if (dir === 'h') e.preventDefault();
+    };
+    const onEnd = e => {
+      if (sx === null || dir !== 'h') { sx = null; return; }
+      const dx = e.changedTouches[0].clientX - sx; sx = null;
+      if (Math.abs(dx) < 38) return;
+      const idx = TABS.indexOf(view);
+      if (dx < 0 && idx < TABS.length-1) setView(TABS[idx+1]);
+      if (dx > 0 && idx > 0) setView(TABS[idx-1]);
+    };
+    const onCancel = () => { sx = null; };
+    el.addEventListener('touchstart', onStart, {passive:true});
+    el.addEventListener('touchmove',  onMove,  {passive:false});
+    el.addEventListener('touchend',   onEnd,   {passive:true});
+    el.addEventListener('touchcancel',onCancel,{passive:true});
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+      el.removeEventListener('touchcancel',onCancel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[view]);
+
   const mesi=lunarMonths(anno), mese=mesi[meseIdx], byYear=baziYear(anno);
 
   function goOggi(){
@@ -2854,47 +2897,79 @@ export default function App() {
     };
   });
 
+  // ── Merge helpers ──────────────────────────────────────────────────────────
+  function mergeById(cloudArr, localArr) {
+    const m = [...(cloudArr||[])];
+    (localArr||[]).forEach(it => { if (!m.find(c=>c.id===it.id)) m.push(it); });
+    return m;
+  }
+  function mergeObjOfArrays(cloudObj, localObj) {
+    const m = {...(cloudObj||{})};
+    Object.entries(localObj||{}).forEach(([k,arr])=>{
+      if (!m[k]) m[k] = arr;
+      else m[k] = mergeById(m[k], arr);
+    });
+    return m;
+  }
+  function mergeData(remote, localData) {
+    return {
+      bazi_cfg:         remote.bazi_cfg ?? localData.bazi_cfg,
+      bazi_personal:    remote.bazi_personal ?? localData.bazi_personal,
+      bazi_note:        mergeObjOfArrays(remote.bazi_note, localData.bazi_note),
+      bazi_events:      mergeObjOfArrays(remote.bazi_events, localData.bazi_events),
+      bazi_promemoria:  mergeObjOfArrays(remote.bazi_promemoria, localData.bazi_promemoria),
+      bazi_routine_cfg: mergeById(remote.bazi_routine_cfg, localData.bazi_routine_cfg),
+      bazi_routine_log: mergeObjOfArrays(remote.bazi_routine_log, localData.bazi_routine_log),
+      bazi_routine_del: mergeById(remote.bazi_routine_del, localData.bazi_routine_del),
+      bazi_habit_cfg:   mergeById(remote.bazi_habit_cfg, localData.bazi_habit_cfg),
+      bazi_habit_log:   mergeObjOfArrays(remote.bazi_habit_log, localData.bazi_habit_log),
+      bazi_habit_del:   mergeById(remote.bazi_habit_del, localData.bazi_habit_del),
+      bazi_todo_lists:  mergeById(remote.bazi_todo_lists, localData.bazi_todo_lists),
+      bazi_todo_del:    mergeById(remote.bazi_todo_del, localData.bazi_todo_del),
+    };
+  }
+
   // ── Firebase auth listener ────────────────────────────────────────────────
   useEffect(()=>{
     if (!firebaseEnabled) return;
     const unsub = onAuthChange(async (user) => {
       setAuthUser(user);
-      if (!user) { setSyncStatus("offline"); return; }
+      if (!user) { setSyncStatus("offline"); setSyncMsg(""); return; }
       setSyncStatus("syncing");
+      setSyncMsg("Recupero dati dal cloud…");
       try {
         const remote = await loadAllKeys(user.uid);
-        if (remote && Object.keys(remote).filter(k=>k!=='__remoteTs').length > 0) {
+        const remoteHasData = remote && Object.keys(remote).filter(k=>k!=='__remoteTs').length > 0;
+
+        if (remoteHasData) {
+          // ALWAYS apply settings from cloud
+          if (remote.bazi_cfg && allSetters.current?.bazi_cfg) allSetters.current.bazi_cfg(remote.bazi_cfg);
+          if (remote.bazi_personal && allSetters.current?.bazi_personal) allSetters.current.bazi_personal(remote.bazi_personal);
+
+          // Check if device has pre-existing personal data (never synced before)
+          const neverPushed = !localStorage.getItem('bazi_last_push');
           const localTs = JSON.parse(localStorage.getItem('bazi_sync_ts')||'{}');
-          const localHasData = SYNC_KEYS.some(k => localStorage.getItem(k) !== null);
-          if (localHasData) {
-            const localLastMod = Math.max(...Object.values(localTs).filter(Boolean), 0);
-            const remoteTs = remote.__remoteTs || 0;
-            const THRESH = 30000; // 30 seconds
-            if (remoteTs > localLastMod + THRESH) {
-              // Remote clearly newer → apply silently
-              SYNC_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
-            } else if (localLastMod > remoteTs + THRESH) {
-              // Local clearly newer → push to cloud silently
-              const currentData = {
-                bazi_cfg:cfg, bazi_note:note, bazi_events:events,
-                bazi_routine_cfg:routineCfg, bazi_routine_log:routineLog,
-                bazi_routine_del:routineDeleted, bazi_habit_cfg:habitCfg,
-                bazi_habit_log:habitLog, bazi_habit_del:habitDeleted,
-                bazi_todo_lists:todoLists, bazi_todo_del:todoDeleted,
-                bazi_promemoria:promemoria, bazi_personal:baziPersonal,
-              };
-              await Promise.all(SYNC_KEYS.map(k => pushKey(user.uid, k, currentData[k])));
-              localStorage.setItem('bazi_last_push', Date.now().toString());
-            } else {
-              // Timestamps ambiguous or equal — apply remote (safest default)
-              SYNC_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
-            }
-          } else {
-            // No local data → apply remote silently
-            SYNC_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
+          const hasLocalChanges = Object.keys(localTs).length > 0;
+          const localEventsCount = Object.keys(JSON.parse(localStorage.getItem('bazi_events')||'{}')).length;
+          const localPromsCount = Object.keys(JSON.parse(localStorage.getItem('bazi_promemoria')||'{}')).length;
+          const localTodoCount = JSON.parse(localStorage.getItem('bazi_todo_lists')||'[]').length;
+          const localHasPersonal = localEventsCount > 0 || localPromsCount > 0 || localTodoCount > 0;
+
+          if (neverPushed && hasLocalChanges && localHasPersonal) {
+            // Device has pre-existing user data — ask what to do
+            setSyncStatus("offline");
+            setSyncMsg("Dati locali trovati");
+            setConflictData({ remote, offline: false, localCounts: { eventi: localEventsCount, promemoria: localPromsCount, todo: localTodoCount } });
+            return; // listener started after user chooses
           }
+
+          // No conflict: apply remote data
+          setSyncMsg("Applicazione dati cloud…");
+          const DATA_KEYS = SYNC_KEYS.filter(k => k !== 'bazi_cfg' && k !== 'bazi_personal');
+          DATA_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
         } else {
-          // First login: push local data to cloud
+          // First use of this account: push local to cloud
+          setSyncMsg("Prima sincronizzazione…");
           const currentData = {
             bazi_cfg:cfg, bazi_note:note, bazi_events:events,
             bazi_routine_cfg:routineCfg, bazi_routine_log:routineLog,
@@ -2903,10 +2978,17 @@ export default function App() {
             bazi_todo_lists:todoLists, bazi_todo_del:todoDeleted,
             bazi_promemoria:promemoria, bazi_personal:baziPersonal,
           };
-          await Promise.all(SYNC_KEYS.map(k => pushKey(user.uid, k, currentData[k])));
+          setSyncMsg(`Caricamento 0/${SYNC_KEYS.length}…`);
+          for (let i=0; i<SYNC_KEYS.length; i++) {
+            await pushKey(user.uid, SYNC_KEYS[i], currentData[SYNC_KEYS[i]]);
+            setSyncMsg(`Caricamento ${i+1}/${SYNC_KEYS.length}…`);
+          }
           localStorage.setItem('bazi_last_push', Date.now().toString());
         }
+        const now = new Date();
         setSyncStatus("synced");
+        setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+        setLastSyncTime(now);
         // Start real-time listener
         if (remoteListenerRef.current) remoteListenerRef.current();
         remoteListenerRef.current = listenUserData(user.uid, (lsKey, value) => {
@@ -2914,12 +2996,11 @@ export default function App() {
         });
       } catch(e) {
         console.error('[Sync]', e);
-        // If offline, keep local data and show offline status
         if (!navigator.onLine || e.code === 'unavailable' || e.message?.includes('offline')) {
-          setSyncStatus("offline");
+          setSyncStatus("offline"); setSyncMsg("Offline — dati locali al sicuro");
           setConflictData({ remote: null, offline: true });
         } else {
-          setSyncStatus("error");
+          setSyncStatus("error"); setSyncMsg("Errore connessione: " + (e.message||"riprovare"));
         }
       }
     });
@@ -2935,7 +3016,7 @@ export default function App() {
     if (!firebaseEnabled || !authUser) return;
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(async ()=>{
-      setSyncStatus("syncing");
+      setSyncStatus("syncing"); setSyncMsg("Sincronizzando…");
       try {
         const data = {
           bazi_cfg:cfg, bazi_note:note, bazi_events:events,
@@ -2947,8 +3028,11 @@ export default function App() {
         };
         await Promise.all(SYNC_KEYS.map(k => pushKey(authUser.uid, k, data[k])));
         localStorage.setItem('bazi_last_push', Date.now().toString());
+        const now = new Date();
         setSyncStatus("synced");
-      } catch(e) { setSyncStatus("error"); }
+        setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+        setLastSyncTime(now);
+      } catch(e) { setSyncStatus("error"); setSyncMsg("Errore sincronizzazione"); }
     }, 2000);
     return ()=>{ if(syncTimerRef.current) clearTimeout(syncTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3225,18 +3309,7 @@ export default function App() {
         )}
 
         {["routine","habit","todo","memo"].includes(view) && (
-          <div
-            onTouchStart={e=>{ utilSwipeX.current=e.touches[0].clientX; }}
-            onTouchEnd={e=>{
-              if(utilSwipeX.current===null) return;
-              const dx=e.changedTouches[0].clientX-utilSwipeX.current; utilSwipeX.current=null;
-              if(Math.abs(dx)<55) return;
-              const tabs=["routine","habit","todo","memo"], idx=tabs.indexOf(view);
-              if(dx<0&&idx<tabs.length-1) setView(tabs[idx+1]);
-              if(dx>0&&idx>0) setView(tabs[idx-1]);
-            }}
-            style={{touchAction:"pan-y"}}
-          >
+          <div id="util-swipe-area">
             {view==="routine" && <MorningRoutineView routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineLog={routineLog} setRoutineLog={setRoutineLog} setView={setView} setImpTab={setImpTab} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} dark={dark}/>}
             {view==="habit"   && <HabitTrackerView habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitLog={habitLog} setHabitLog={setHabitLog} setView={setView} setImpTab={setImpTab} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} dark={dark}/>}
             {view==="todo"    && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
@@ -3244,55 +3317,75 @@ export default function App() {
           </div>
         )}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
-        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} signInWithGoogle={signInWithGoogle} sendPasswordReset={sendPasswordReset} updateUserEmail={updateUserEmail} events={events} promemoria={promemoria}/>}
+        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} syncMsg={syncMsg} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} signInWithGoogle={signInWithGoogle} sendPasswordReset={sendPasswordReset} updateUserEmail={updateUserEmail} events={events} promemoria={promemoria}/>}
       </div>
 
-      {/* Conflict resolution modal — only shown when offline at login */}
+      {/* Conflict resolution modal */}
       {conflictData && (
         <ModalBox onClose={null} dark={dark} zIndex={500}>
-          <div style={{padding:"4px 0 12px",textAlign:"center"}}>
-            <div style={{fontSize:20,marginBottom:8}}>{conflictData.offline?"📵":"⚠️"}</div>
-            <div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:6}}>
-              {conflictData.offline?"Sincronizzazione offline":"Conflitto dati"}
-            </div>
-            <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6,marginBottom:16}}>
-              {conflictData.offline
-                ? "Non è stato possibile connettersi al cloud. I tuoi dati locali sono al sicuro."
-                : "Trovati dati sia locali che sul cloud. Quale versione vuoi usare?"}
+          <div style={{padding:"4px 0 12px"}}>
+            <div style={{textAlign:"center",marginBottom:12}}>
+              <div style={{fontSize:22,marginBottom:6}}>{conflictData.offline?"📵":"⚡"}</div>
+              <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:4}}>
+                {conflictData.offline?"Sincronizzazione offline":"Dati locali trovati"}
+              </div>
+              <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6}}>
+                {conflictData.offline
+                  ? "Connessione al cloud non disponibile. Dati locali al sicuro."
+                  : `Questo dispositivo ha dati non sincronizzati:${conflictData.localCounts ? ` ${conflictData.localCounts.eventi} eventi · ${conflictData.localCounts.promemoria} promemoria · ${conflictData.localCounts.todo} liste` : ""}. Come vuoi procedere?`}
+              </div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {!conflictData.offline && conflictData.remote && (
-                <button onClick={()=>{
-                  SYNC_KEYS.forEach(k=>{ if(conflictData.remote[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](conflictData.remote[k]); });
-                  setConflictData(null); setSyncStatus("synced");
-                }} style={{padding:"10px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
-                  ☁️ Usa dati cloud
-                </button>
-              )}
-              {!conflictData.offline && (
-                <button onClick={async ()=>{
-                  if (!authUser) return;
-                  setSyncStatus("syncing");
-                  const data = {
-                    bazi_cfg:cfg,bazi_note:note,bazi_events:events,
-                    bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,
-                    bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,
-                    bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,
-                    bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,
-                    bazi_promemoria:promemoria,bazi_personal:baziPersonal,
-                  };
-                  try {
-                    await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,data[k])));
+                <>
+                  <button onClick={async ()=>{
+                    // Merge: combine cloud + local unique items
+                    const localData = {bazi_note:note,bazi_events:events,bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,bazi_promemoria:promemoria,bazi_personal:baziPersonal,bazi_cfg:cfg};
+                    const merged = mergeData(conflictData.remote, localData);
+                    SYNC_KEYS.forEach(k=>{ if(merged[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](merged[k]); });
+                    setSyncStatus("syncing"); setSyncMsg("Unione dati…");
+                    try {
+                      await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,merged[k])));
+                      localStorage.setItem('bazi_last_push',Date.now().toString());
+                      const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+                    } catch { setSyncStatus("error"); setSyncMsg("Errore"); }
+                    setConflictData(null);
+                    if(remoteListenerRef.current) remoteListenerRef.current();
+                    remoteListenerRef.current=listenUserData(authUser.uid,(k,v)=>{ if(allSetters.current?.[k]) allSetters.current[k](v); });
+                  }} style={{padding:"11px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600}}>
+                    Unisci — aggiungi locale al cloud
+                  </button>
+                  <button onClick={()=>{
+                    // Use cloud data
+                    SYNC_KEYS.forEach(k=>{ if(conflictData.remote[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](conflictData.remote[k]); });
                     localStorage.setItem('bazi_last_push',Date.now().toString());
-                    setSyncStatus("synced");
-                  } catch { setSyncStatus("error"); }
-                  setConflictData(null);
-                }} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
-                  📱 Usa dati locali (sovrascrive cloud)
-                </button>
+                    const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+                    setConflictData(null);
+                    if(remoteListenerRef.current) remoteListenerRef.current();
+                    remoteListenerRef.current=listenUserData(authUser.uid,(k,v)=>{ if(allSetters.current?.[k]) allSetters.current[k](v); });
+                  }} style={{padding:"11px",fontSize:13,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
+                    Cancella locale — usa solo cloud
+                  </button>
+                  <button onClick={async ()=>{
+                    // Use local, overwrite cloud
+                    if (!authUser) return;
+                    setSyncStatus("syncing"); setSyncMsg("Caricamento dati locali…");
+                    const data = {bazi_cfg:cfg,bazi_note:note,bazi_events:events,bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,bazi_promemoria:promemoria,bazi_personal:baziPersonal};
+                    try {
+                      await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,data[k])));
+                      localStorage.setItem('bazi_last_push',Date.now().toString());
+                      const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+                    } catch { setSyncStatus("error"); setSyncMsg("Errore"); }
+                    setConflictData(null);
+                    if(remoteListenerRef.current) remoteListenerRef.current();
+                    remoteListenerRef.current=listenUserData(authUser.uid,(k,v)=>{ if(allSetters.current?.[k]) allSetters.current[k](v); });
+                  }} style={{padding:"11px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
+                    Sovrascrivi cloud con locale
+                  </button>
+                </>
               )}
-              <button onClick={()=>{ setConflictData(null); setSyncStatus("offline"); }} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text-sec)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
-                ⏱ Scegli dopo (continua offline)
+              <button onClick={()=>{ setConflictData(null); setSyncStatus("offline"); setSyncMsg("Offline — scegli in un secondo momento"); }} style={{padding:"10px",fontSize:12,background:"transparent",color:"var(--text-ter)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
+                Scegli dopo (continua offline)
               </button>
             </div>
           </div>
