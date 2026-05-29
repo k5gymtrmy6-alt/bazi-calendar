@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import SunCalc from "suncalc";
 import {
   firebaseEnabled, onAuthChange, signInAnon, signInEmail, createAccount,
-  signOutUser, pushKey, loadAllKeys, listenUserData, SYNC_KEYS,
+  signOutUser, sendPasswordReset, updateUserEmail, signInWithGoogle,
+  pushKey, loadAllKeys, listenUserData, SYNC_KEYS,
 } from "./firebase.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -29,20 +31,31 @@ const MODAL_BG_EL = {
   legno:"#f0faf3", fuoco:"#fef3ee", terra:"#fdf8ec", metallo:"#f5f5f4", acqua:"#eef6fd", default:"#f8f8f6",
 };
 
-const EKADASHI_DATES = [
-  "2025-01-10","2025-01-25","2025-02-08","2025-02-24","2025-03-10","2025-03-25",
-  "2025-04-08","2025-04-27","2025-05-12","2025-05-27","2025-06-10","2025-06-25",
-  "2025-07-10","2025-07-24","2025-08-09","2025-08-23","2025-09-07","2025-09-22",
-  "2025-10-06","2025-10-21","2025-11-05","2025-11-20","2025-12-04","2025-12-19",
-  "2026-01-03","2026-01-18","2026-02-02","2026-02-16","2026-03-03","2026-03-18",
-  "2026-04-02","2026-04-13","2026-04-27","2026-05-13","2026-05-27",
-  "2026-06-11","2026-06-25","2026-07-10","2026-07-25","2026-08-09","2026-08-23",
-  "2026-09-07","2026-09-22","2026-10-06","2026-10-21","2026-11-05","2026-11-20",
-  "2026-12-04","2026-12-20",
-  "2027-01-03","2027-01-18","2027-02-02","2027-02-17",
-].map(s => { const [y,m,d]=s.split("-"); return new Date(+y,+m-1,+d).toDateString(); });
-
-function isEkadashi(date) { return EKADASHI_DATES.includes(date.toDateString()); }
+// Algorithmic Ekadashi — works for any year using moon phase (Tithi approximation)
+// Shukla Ekadashi ≈ phase 0.33 (11th day waxing), Krishna Ekadashi ≈ phase 0.83 (11th day waning)
+const _ekadashiCache = {};
+function getEkadashiSet(year) {
+  if (_ekadashiCache[year]) return _ekadashiCache[year];
+  const set = new Set();
+  const start = new Date(year, 0, 1);
+  const end   = new Date(year, 11, 31);
+  let prev = SunCalc.getMoonIllumination(new Date(start.getTime()-86400000)).phase;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+    const curr = SunCalc.getMoonIllumination(new Date(d)).phase;
+    // Shukla Ekadashi: phase crosses ~0.34 (11/30 of waxing half = 11/30 of 0-0.5)
+    const SH = 0.340, KR = 0.840;
+    if (prev < SH && curr >= SH) set.add(new Date(d).toDateString());
+    if (prev < KR && curr >= KR) set.add(new Date(d).toDateString());
+    // Handle wrap-around (phase resets from ~1 to ~0 at new moon)
+    if (prev > 0.95 && curr < 0.05) prev = 0; // reset for wrap
+    prev = curr;
+  }
+  _ekadashiCache[year] = set;
+  return set;
+}
+function isEkadashi(date) {
+  return getEkadashiSet(date.getFullYear()).has(date.toDateString());
+}
 
 const ANIMALI_INFO = [
   { nome:"Ratto",    emoji:"🐀", el:"acqua",  tratti:"Intelligente, adattabile, arguto, persuasivo. Eccelle nel networking e nel trovare soluzioni creative. Natura Yang.", ore:"23:00–01:00" },
@@ -117,6 +130,51 @@ const LUNA_CORPO = {
   "Calante":           { em:"🌘", corpo:"Metabolismo al minimo, rigenerazione cellulare intensa durante il riposo. Evita interventi chirurgici se possibile.", natura:"Suolo a riposo. Minima attività vegetativa, il terreno si rigenera.", psiche:"Introversione profonda. Meditazione, silenzio e recupero energetico." },
 };
 
+// ── Agricoltura ───────────────────────────────────────────────────────────────
+// Seasonal data for Italy (biodynamic + traditional agricultural calendars)
+const AGRICOLTURA_MESI = [
+  { cover:"🍊", nome:"Gennaio",   prodotti:["🍊 Arance e mandarini","🍋 Limoni","🥦 Broccoli e cavoli","🥬 Spinaci e radicchio","🧅 Porri e finocchio","🌰 Frutta secca"] },
+  { cover:"🥦", nome:"Febbraio",  prodotti:["🍊 Arance (ultime)","🥦 Broccoli e cavoli","🥬 Spinaci e verza","🧅 Porri e cipolle","🌿 Carciofi (inizio)","🥝 Kiwi"] },
+  { cover:"🌿", nome:"Marzo",     prodotti:["🌿 Asparagi (inizio)","🌿 Carciofi","🥬 Spinaci e insalate","🌱 Piselli (inizio)","🥕 Carote primaticce","🍋 Agrumi (fine)"] },
+  { cover:"🍓", nome:"Aprile",    prodotti:["🍓 Fragole (inizio)","🌿 Asparagi","🌿 Carciofi","🫘 Fave e piselli","🥬 Insalate varie","🌱 Ravanelli e erbe aromatiche"] },
+  { cover:"🍓", nome:"Maggio",    prodotti:["🍓 Fragole","🍒 Ciliegie (inizio)","🌿 Asparagi (fine)","🫘 Fave e piselli","🥒 Zucchine (inizio)","🥬 Lattuga e insalate"] },
+  { cover:"🍒", nome:"Giugno",    prodotti:["🍒 Ciliegie","🍑 Albicocche","🍑 Pesche (inizio)","🍓 Fragole (fine)","🥒 Zucchine","🍅 Pomodori (inizio)","🫑 Melanzane e peperoni"] },
+  { cover:"🍉", nome:"Luglio",    prodotti:["🍉 Anguria","🍈 Melone","🍑 Pesche e nettarine","🍒 Ciliegie (fine)","🫐 Mirtilli e more","🍅 Pomodori","🥒 Cetrioli e zucchine"] },
+  { cover:"🍑", nome:"Agosto",    prodotti:["🍑 Pesche e nettarine","🍉 Anguria","🍈 Melone","🍑 Fichi (inizio)","🍑 Prugne","🫐 More e mirtilli","🍅 Pomodori","🌽 Mais"] },
+  { cover:"🍇", nome:"Settembre", prodotti:["🍇 Uva","🍑 Fichi","🍑 Prugne (fine)","🍎 Mele (inizio)","🍐 Pere","🍄 Funghi","🎃 Zucca","🍅 Pomodori (fine)"] },
+  { cover:"🍎", nome:"Ottobre",   prodotti:["🍎 Mele","🍐 Pere","🍅 Cachi","🌰 Castagne","🍄 Funghi","🍇 Uva (fine)","🎃 Zucca","🥦 Cavolfiore e broccoli","🍁 Radicchio"] },
+  { cover:"🌰", nome:"Novembre",  prodotti:["🌰 Castagne (fine)","🍅 Cachi","🍎 Mele e pere","🥝 Kiwi","🍎 Melograni","🥦 Broccoli e cavolfiore","🌿 Carciofi","🥬 Cavoli e radicchio"] },
+  { cover:"🍊", nome:"Dicembre",  prodotti:["🍊 Arance e mandarini","🍋 Limoni (inizio)","🥝 Kiwi","🍎 Mele e pere","🥦 Broccoli e verza","🥬 Radicchio e finocchio","🧅 Porri"] },
+];
+
+// Advice by moon phase (biodynamic + traditional Italian)
+const LUNA_AGRICOLTURA = {
+  "Luna Nuova":        { icon:"🌑", semina:"Evita semine — la terra è a riposo. Prepara il suolo, aggiungi compost.", potatura:"Non potare. Giorno ideale per pulire attrezzi e pianificare.", raccolta:"Evita raccolte se possibile.", note:"Giorno di pausa: la linfa è alle radici, il terreno si rigenera." },
+  "Crescente":         { icon:"🌒", semina:"Ottimo per seminare piante da frutto e foglia. I succhi salgono — la germogliazione è più rapida.", potatura:"Leggera potatura formativa. Evita tagli importanti.", raccolta:"Raccolta di piante aromatiche e da foglia — sapore più intenso.", note:"Fase di crescita: tutto ciò che semini ha slancio in più." },
+  "Primo Quarto":      { icon:"🌓", semina:"Semina di cereali, legumi e piante da frutto. Alta energia di crescita.", potatura:"Potatura leggera per stimolare rami laterali.", raccolta:"Buona raccolta di frutti e cereali.", note:"Linfa in equilibrio ascendente — ottimo per trapianti." },
+  "Gibbosa Crescente": { icon:"🌔", semina:"Semina fiori e piante da bacca. Irrigazione più efficace.", potatura:"Evita potature importanti — linfa abbondante.", raccolta:"Ottima raccolta di frutti al massimo della turgidità.", note:"Frutti al picco succoso: ideale per conserve e marmellate." },
+  "Luna Piena":        { icon:"🌕", semina:"Evita semina — energia dispersa. Concentra su raccolta e conservazione.", potatura:"Non potare — i tessuti sono gonfi e la pianta sanguina.", raccolta:"Raccolta di frutti maturi al picco aromatico. Eccellente per vino e olio.", note:"Massima carica energetica: harvesting day per eccellenza." },
+  "Gibbosa Calante":   { icon:"🌖", semina:"Semina radici e bulbi: cipolla, aglio, patate.", potatura:"Ottima potatura: i tagli cicatrizzano bene, la linfa scende.", raccolta:"Raccolta di radici e tuberi. Ottimo per essiccare erbe.", note:"Linfa discendente: i tagli richiudono velocemente." },
+  "Ultimo Quarto":     { icon:"🌗", semina:"Semina radici, bulbi e piante da radice. Ottimo per concimare.", potatura:"Potatura principale: forma duratura, guarigione rapida.", raccolta:"Raccolta di radici, patate e prodotti da conservare.", note:"Lavora il suolo, estirpa le malerbe — le radici non ricrescono." },
+  "Calante":           { icon:"🌘", semina:"Semina bulbi e radici. Evita piante da foglia.", potatura:"Potatura tardiva prima del riposo vegetativo.", raccolta:"Raccolta di tutto ciò da conservare a lungo.", note:"Terra a riposo. Irrigazione ridotta al minimo." },
+};
+
+// Zodiac-based biodynamic calendar (Maria Thun system)
+const LUNA_ZODIACO_AGRI = {
+  0:  { tipo:"Frutto",  icon:"🍎", desc:"Ariete — Frutto. Ideale per raccolta di frutti, viticoltura, semina di pomodori e peperoni." },
+  1:  { tipo:"Radice",  icon:"🥕", desc:"Toro — Radice. Ottimo per patate, carote, bulbi. Lavorazione del suolo produttiva." },
+  2:  { tipo:"Fiore",   icon:"🌸", desc:"Gemelli — Fiore. Perfetto per piante aromatiche, fiori commestibili, api e impollinatori." },
+  3:  { tipo:"Foglia",  icon:"🥬", desc:"Cancro — Foglia. Ideale per insalate, spinaci, cavoli. Irrigazione efficace." },
+  4:  { tipo:"Frutto",  icon:"🍅", desc:"Leone — Frutto. Raccolta di frutti e cereali al massimo. Evita trapianti." },
+  5:  { tipo:"Radice",  icon:"🧅", desc:"Vergine — Radice. Semina radici e bulbi. Concimazione radicale efficace." },
+  6:  { tipo:"Fiore",   icon:"🌻", desc:"Bilancia — Fiore. Ottimo per fiori e piante ornamentali. Potatura estetica." },
+  7:  { tipo:"Foglia",  icon:"🌿", desc:"Scorpione — Foglia. Erbe medicinali al picco. Semina foglie a crescita lenta." },
+  8:  { tipo:"Frutto",  icon:"🍇", desc:"Sagittario — Frutto. Vendemmia, raccolta olive, frutta secca. Eccellente per vini." },
+  9:  { tipo:"Radice",  icon:"🌰", desc:"Capricorno — Radice. Tartufi, tuberi, radici medicinali. Potatura resistente." },
+  10: { tipo:"Fiore",   icon:"🌼", desc:"Acquario — Fiore. Semina fiori da taglio. Buono per api e biodiversità." },
+  11: { tipo:"Foglia",  icon:"🫧", desc:"Pesci — Foglia. Semina lattughe e piante acquatiche. Attenzione a funghi." },
+};
+
 // ── Default data ──────────────────────────────────────────────────────────────
 const DEFAULT_ROUTINE_CFG = [
   { id:"r1", label:"Meditazione",  durata:10, tipo:"tempo", attiva:true },
@@ -144,48 +202,31 @@ function dateToJD(d) {
   const utcNoon = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 12));
   return utcNoon.getTime() / 864e5 + 2440587.5;
 }
-function moonPhase(d) { const x=dateToJD(d)-MOON_REF_JD; return((x%SYNODIC)+SYNODIC)%SYNODIC; }
+// Use SunCalc for accurate moon phase (corrects planetary perturbations)
+function moonPhase(d) {
+  const illum = SunCalc.getMoonIllumination(d);
+  return illum.phase * SYNODIC; // 0-29.53 days
+}
 function moonEmoji(p) { if(p<1.85)return"🌑";if(p<5.54)return"🌒";if(p<9.22)return"🌓";if(p<12.91)return"🌔";if(p<16.61)return"🌕";if(p<20.30)return"🌖";if(p<23.99)return"🌗";if(p<27.68)return"🌘";return"🌑"; }
 function moonName(p) { if(p<1.85)return"Luna Nuova";if(p<5.54)return"Crescente";if(p<9.22)return"Primo Quarto";if(p<12.91)return"Gibbosa Crescente";if(p<16.61)return"Luna Piena";if(p<20.30)return"Gibbosa Calante";if(p<23.99)return"Ultimo Quarto";if(p<27.68)return"Calante";return"Luna Nuova"; }
 function moonKey(p) { const H=0.7,nm=p>SYNODIC-H?p-SYNODIC:p; if(Math.abs(nm)<=H)return"🌑";if(Math.abs(p-7.38)<=H)return"🌓";if(Math.abs(p-14.77)<=H)return"🌕";if(Math.abs(p-22.15)<=H)return"🌗";return""; }
-function lunaZodiac(d) { const x=dateToJD(d)-MOON_REF_JD; return Math.floor(((x%SIDEREAL)+SIDEREAL)%SIDEREAL/(SIDEREAL/12))%12; }
+// Use ecliptic longitude for accurate tropical zodiac sign (0=Ariete...11=Pesci)
+function lunaZodiac(d) {
+  const t = dateToJD(d) - 2451545.0;
+  const L = ((218.316 + 13.176396 * t) % 360 + 360) % 360;
+  const M = ((134.963 + 13.064993 * t) % 360 + 360) % 360 * RAD;
+  const F = ((93.272  + 13.229350 * t) % 360 + 360) % 360 * RAD;
+  const lam = ((L + 6.289*Math.sin(M) + 1.274*Math.sin(2*dateToJD(d)*RAD-M) - 0.658*Math.sin(2*F)) % 360 + 360) % 360;
+  return Math.floor(lam / 30); // 0=Ariete...11=Pesci
+}
 
-// Moon rise/set times (Jean Meeus simplified, ±30 min accuracy)
+// Moon rise/set times via suncalc (professional accuracy, same as weather apps)
 // lat/lon in degrees; returns {rise:"HH:MM", set:"HH:MM"} or null
 function moonTimesForDate(date, lat, lon) {
-  const JD = dateToJD(date);
-  const d  = JD - 2451545.0;
-  // Ecliptic coords
-  const L = ((218.316 + 13.176396 * d) % 360 + 360) % 360;
-  const M = ((134.963 + 13.064993 * d) % 360 + 360) % 360;
-  const F = ((93.272  + 13.229350 * d) % 360 + 360) % 360;
-  const lam = (L + 6.289 * Math.sin(M * RAD)) * RAD;
-  const bet = (5.128   * Math.sin(F * RAD)) * RAD;
-  const eps = 23.4397  * RAD;
-  // RA / Dec
-  const ra  = Math.atan2(Math.sin(lam)*Math.cos(eps) - Math.tan(bet)*Math.sin(eps), Math.cos(lam));
-  const dec = Math.asin(Math.sin(bet)*Math.cos(eps) + Math.cos(bet)*Math.sin(eps)*Math.sin(lam));
-  // Hour angle for altitude ≈ 0° (simplified)
-  const h0   = 0.7 * RAD;
-  const cosH = (Math.sin(h0) - Math.sin(lat*RAD)*Math.sin(dec)) / (Math.cos(lat*RAD)*Math.cos(dec));
-  if (Math.abs(cosH) > 1) return null;
-  const H = Math.acos(cosH) / RAD;
-  // GMST at 0h UT
-  const JD0   = Math.floor(JD - 0.5) + 0.5;
-  const T     = (JD0 - 2451545.0) / 36525;
-  const GMST0 = ((100.4606184 + 36000.77004*T + 0.000387933*T*T) % 360 + 360) % 360;
-  const raD   = ((ra / RAD) % 360 + 360) % 360;
-  const trUT  = ((raD - lon - GMST0) / 360 % 1 + 1) % 1 * 24;
-  const riseUT = ((trUT - H/15) % 24 + 24) % 24;
-  const setUT  = ((trUT + H/15) % 24 + 24) % 24;
-  const tzOff = -date.getTimezoneOffset() / 60;
-  const fmt = ut => {
-    const local = (ut + tzOff + 24) % 24;
-    const hh = Math.floor(local), raw_mm = Math.round((local-hh)*60);
-    const mm = raw_mm === 60 ? 0 : raw_mm, hh2 = raw_mm === 60 ? (hh+1)%24 : hh;
-    return `${String(hh2).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
-  };
-  return { rise: fmt(riseUT), set: fmt(setUT) };
+  const times = SunCalc.getMoonTimes(date, lat, lon);
+  if (times.alwaysUp || times.alwaysDown || !times.rise || !times.set) return null;
+  const fmt = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  return { rise: fmt(times.rise), set: fmt(times.set) };
 }
 
 // ── Ba-Zi ─────────────────────────────────────────────────────────────────────
@@ -213,9 +254,11 @@ function newMoonJDE(k) {
     + 0.01608*Math.sin(2*Mp)  + 0.01039*Math.sin(2*F)
     + 0.00739*E*Math.sin(Mp-M)- 0.00514*E*Math.sin(Mp+M)
     + 0.00208*E*E*Math.sin(2*M)- 0.00111*Math.sin(Mp-2*F)
-    - 0.00057*Math.sin(Mp+2*F)- 0.00042*Math.sin(3*Mp)
+    - 0.00057*Math.sin(Mp+2*F)+ 0.00056*E*Math.sin(2*Mp+M)
+    - 0.00042*Math.sin(3*Mp)
     + 0.00042*E*Math.sin(M+2*F)+ 0.00038*E*Math.sin(M-2*F)
-    - 0.00024*E*Math.sin(2*Mp-M)- 0.00017*Math.sin(Om);
+    - 0.00024*E*Math.sin(2*Mp-M)- 0.00017*Math.sin(Om)
+    - 0.00007*Math.sin(Mp+2*M);
 }
 function jdeToLocalDate(jde) {
   const d = new Date((jde - 2440587.5) * 86400000);
@@ -244,9 +287,10 @@ function baziYear(dateOrYear) {
 }
 
 // baziMonth: yearTronco = heavenly stem of the Ba-Zi year (0–9)
+// Five Tigers rule: month 1 (Yin) tronco = (yearTronco%5)*2+2, then +1 per month
 function baziMonth(i, yearTronco) {
-  const base = yearTronco !== undefined ? ((yearTronco % 5) * 2 + 2) % 10 : (i*2)%10;
-  return{tronco:(base + i*2)%10, ramo:(i+2)%12};
+  const base = yearTronco !== undefined ? ((yearTronco % 5) * 2 + 2) % 10 : 2;
+  return{tronco:(base + i)%10, ramo:(i+2)%12};
 }
 
 // Lunar months based on astronomical new moons.
@@ -303,20 +347,42 @@ function useLS(key, defaultValue) {
 }
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
-function BaziLogo({ size=32 }) {
+function BaziLogo({ size=26, opacity=1 }) {
   return (
-    <svg viewBox="0 0 160 160" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
-      <polygon points="80,14 114,27 134,54 134,106 114,133 80,146 46,133 26,106 26,54 46,27"
-        fill="none" stroke="#2C3E2D" strokeWidth="1.2"/>
-      <circle cx="80" cy="80" r="40" fill="none" stroke="#2C3E2D" strokeWidth="0.8"/>
-      <circle cx="80" cy="80" r="30" fill="#f0ede8" opacity="0.9"/>
-      <path d="M80,50 A30,30 0 0,1 80,110 A15,15 0 0,1 80,80 A15,15 0 0,0 80,50 Z" fill="#f0ede8"/>
-      <path d="M80,50 A30,30 0 0,0 80,110 A15,15 0 0,0 80,80 A15,15 0 0,1 80,50 Z" fill="#2C3E2D" opacity="0.72"/>
-      <circle cx="80" cy="65" r="6" fill="#f0ede8" opacity="0.88"/>
-      <circle cx="80" cy="95" r="6" fill="#2C3E2D" opacity="0.72"/>
-      <circle cx="80" cy="80" r="30" fill="none" stroke="#2C3E2D" strokeWidth="0.8"/>
-      <path d="M80,50 A15,15 0 0,1 80,80 A15,15 0 0,0 80,110" fill="none" stroke="#2C3E2D" strokeWidth="0.8"/>
-      <circle cx="114" cy="46" r="5" fill="#4a7c59"/>
+    <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0,opacity}}>
+      {/* Yin (sage green) background circle */}
+      <circle cx="50" cy="50" r="46" fill="#5d6b56"/>
+      {/* Yang half (cream) */}
+      <path d="M50,4 A46,46 0 0,1 50,96 A23,23 0 0,0 50,50 A23,23 0 0,1 50,4 Z" fill="#edeae3"/>
+      {/* Light dot in yin half (upper) */}
+      <circle cx="50" cy="27" r="11" fill="#edeae3"/>
+      {/* Dark dot in yang half (lower) */}
+      <circle cx="50" cy="73" r="13" fill="#1e2d1c"/>
+      {/* Outer border */}
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#2C3E2D" strokeWidth="4"/>
+    </svg>
+  );
+}
+
+// ── Nav Icons ─────────────────────────────────────────────────────────────────
+function IconUtility({ size=26 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block",flexShrink:0}}>
+      <rect x="3" y="13" width="4" height="7" rx="1"/>
+      <rect x="10" y="8" width="4" height="12" rx="1"/>
+      <rect x="17" y="4" width="4" height="16" rx="1"/>
+    </svg>
+  );
+}
+function IconImpostazioni({ size=26 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{display:"block",flexShrink:0}}>
+      <line x1="3" y1="7" x2="21" y2="7"/>
+      <circle cx="8" cy="7" r="2.5" fill="var(--bg)" stroke="currentColor" strokeWidth="2"/>
+      <line x1="3" y1="13" x2="21" y2="13"/>
+      <circle cx="16" cy="13" r="2.5" fill="var(--bg)" stroke="currentColor" strokeWidth="2"/>
+      <line x1="3" y1="19" x2="21" y2="19"/>
+      <circle cx="10" cy="19" r="2.5" fill="var(--bg)" stroke="currentColor" strokeWidth="2"/>
     </svg>
   );
 }
@@ -463,6 +529,66 @@ function MoonBodyModal({ currentPhase, onClose, dark }) {
                     <span style={{marginRight:4}}>{ico}</span>{txt}
                   </div>
                 ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </ModalBox>
+  );
+}
+
+function AgricolturaModal({ meseGrego, moonPhaseStr, zodiacIdx, onClose, dark }) {
+  const mData = AGRICOLTURA_MESI[meseGrego] || AGRICOLTURA_MESI[0];
+  const lunaAgri = LUNA_AGRICOLTURA[moonPhaseStr] || LUNA_AGRICOLTURA["Crescente"];
+  const zodAgri = LUNA_ZODIACO_AGRI[zodiacIdx] || LUNA_ZODIACO_AGRI[0];
+  return (
+    <ModalBox onClose={onClose} zIndex={400} elKey="legno" dark={dark}>
+      <ModalHeader title={`🌱 Agricoltura — ${mData.nome}`} onClose={onClose}/>
+      {/* Monthly produce */}
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:"var(--text-sec)",marginBottom:6}}>🧺 Prodotti di stagione</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+          {mData.prodotti.map((p,i)=>(
+            <span key={i} style={{fontSize:11,padding:"3px 8px",borderRadius:12,background:dark?"#1a2a1a":"#e8f5e9",color:"var(--text)",border:"0.5px solid #4a7c5933"}}>{p}</span>
+          ))}
+        </div>
+      </div>
+      {/* Moon phase advice */}
+      <div style={{marginBottom:14,padding:"10px 12px",background:dark?"#0d1a0d":"#f0faf3",borderRadius:10,border:"0.5px solid #4a7c5944"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+          <span style={{fontSize:16}}>{lunaAgri.icon}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{moonPhaseStr}</span>
+        </div>
+        <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6,marginBottom:6}}>{lunaAgri.note}</div>
+        {[["🌱 Semina",lunaAgri.semina],["✂️ Potatura",lunaAgri.potatura],["🧺 Raccolta",lunaAgri.raccolta]].map(([label,val])=>(
+          <div key={label} style={{fontSize:11,color:"var(--text)",marginBottom:3}}>
+            <span style={{fontWeight:600}}>{label}: </span>{val}
+          </div>
+        ))}
+      </div>
+      {/* Today's zodiac */}
+      <div style={{marginBottom:14,padding:"10px 12px",background:dark?"#1a1a0d":"#fffbeb",borderRadius:10,border:"0.5px solid #8b691433"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+          <span style={{fontSize:16}}>{zodAgri.icon}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>Oggi — Luna in {zodAgri.tipo}</span>
+        </div>
+        <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6}}>{zodAgri.desc}</div>
+      </div>
+      {/* Full zodiac guide */}
+      <div style={{fontSize:11,fontWeight:600,color:"var(--text-sec)",marginBottom:6}}>🔭 Luna nei segni — guida completa</div>
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        {Object.entries(LUNA_ZODIACO_AGRI).map(([idx,z])=>{
+          const isCurr = parseInt(idx)===zodiacIdx;
+          return (
+            <div key={idx} style={{padding:"7px 10px",borderRadius:8,background:isCurr?(dark?"#1a2a0a":"#f0faf3"):"var(--bg-card)",border:`0.5px solid ${isCurr?"#4a7c59":"var(--border-ter)"}`,display:"flex",gap:8,alignItems:"flex-start"}}>
+              <span style={{fontSize:14,flexShrink:0}}>{z.icon}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:isCurr?"#4a7c59":"var(--text)",marginBottom:1}}>
+                  {["Ariete","Toro","Gemelli","Cancro","Leone","Vergine","Bilancia","Scorpione","Sagittario","Capricorno","Acquario","Pesci"][parseInt(idx)]} — {z.tipo}
+                  {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>ora</span>}
+                </div>
+                <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z.desc}</div>
               </div>
             </div>
           );
@@ -846,17 +972,19 @@ function StoricoGrid({ items, log14, isQuit=false, onClose, dark }) {
               </div>
             ))}
           </div>
-          {items.map(it=>(
+          {items.map(it=>{
+            const itemColor = it.colore || "var(--accent)";
+            return (
             <div key={it.id} style={{display:"flex",alignItems:"center",marginBottom:2}}>
-              <div style={{width:58,flexShrink:0,fontSize:9,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:4}}>{it.label}</div>
+              <div style={{width:58,flexShrink:0,fontSize:9,color:itemColor,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:4,fontWeight:500}}>{it.label}</div>
               {days.map(({key,isOggi})=>{
                 const done = isDone(key, it);
                 return (
                   <div key={key} style={{width:22,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                     <div style={{
                       width:16,height:16,borderRadius:3,
-                      background:done?"var(--accent)":dark?"#2a2a2a":"var(--bg-gray)",
-                      border:isOggi?`1px solid var(--accent-44)`:`0.5px solid ${dark?"#333":"var(--border-ter)"}`,
+                      background:done?itemColor:dark?"#2a2a2a":"var(--bg-gray)",
+                      border:isOggi?`1px solid ${itemColor}66`:`0.5px solid ${dark?"#333":"var(--border-ter)"}`,
                       display:"flex",alignItems:"center",justifyContent:"center"
                     }}>
                       {done&&<span style={{fontSize:7,color:"white",lineHeight:1}}>✓</span>}
@@ -865,7 +993,8 @@ function StoricoGrid({ items, log14, isQuit=false, onClose, dark }) {
                 );
               })}
             </div>
-          ))}
+          );})}
+
         </div>
       </div>
     </div>
@@ -938,14 +1067,14 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
           fontWeight:isCal?600:400,userSelect:"none",
           display:"flex",flexDirection:"column",alignItems:"center",
         }}>
-          <BaziLogo size={20}/>
-          <div style={{fontSize:10,marginTop:2}}>Calendario</div>
+          <BaziLogo size={26} opacity={isCal ? 1 : 0.38}/>
+          <div style={{fontSize:10,marginTop:1}}>Calendario</div>
         </div>
         {/* Nav items */}
         {[
-          {k:"utility",     label:"Utility",   ico:"⚡"},
-          {k:"bazi",        label:"Ba-Zi",     ico:"☯"},
-          {k:"impostazioni",label:"Impostaz.", ico:"⚙️"},
+          {k:"utility",     label:"Utility",   ico:<IconUtility size={26}/>},
+          {k:"bazi",        label:"Ba-Zi",     ico:<span style={{fontSize:25,lineHeight:1,display:"block"}}>☯</span>},
+          {k:"impostazioni",label:"Impostaz.", ico:<IconImpostazioni size={26}/>},
         ].map(({k,label,ico})=>{
           const active = k==="utility" ? isUtility : view===k;
           return (
@@ -957,8 +1086,10 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab }) {
               style={{flex:1,textAlign:"center",padding:"6px 0 5px",cursor:"pointer",
                       color:active?"var(--accent)":"var(--text-sub)",
                       borderBottom:active?"2px solid var(--accent)":"2px solid transparent",
-                      fontWeight:active?600:400,userSelect:"none"}}>
-              <div style={{fontSize:18,lineHeight:1.2}}>{ico}</div>
+                      fontWeight:active?600:400,userSelect:"none",
+                      opacity: k==="bazi"&&!active ? 0.38 : 1,
+                      display:"flex",flexDirection:"column",alignItems:"center"}}>
+              {ico}
               <div style={{fontSize:10,marginTop:1}}>{label}</div>
             </div>
           );
@@ -1097,11 +1228,23 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
 
   const ris = data ? (()=>{
     const d=new Date(data+"T12:00:00"), h=parseInt(ora);
+    // Fix 1: pass Date so Li Chun boundary is respected
+    const yearBazi = baziYear(d);
+    // Fix 2: Ba-Zi month via days since Li Chun (solar terms, ~30.44d each)
+    const baziY = yearBazi.tronco !== undefined
+      ? d < liChunDate(d.getFullYear()) ? d.getFullYear()-1 : d.getFullYear()
+      : d.getFullYear();
+    const daysSinceLiChun = (d - liChunDate(baziY)) / 86400000;
+    const solarMonthIdx = ((Math.floor(daysSinceLiChun / 30.4368) % 12) + 12) % 12;
+    // Fix 3: 五鼠遁日法 — hour stem depends on day stem
+    const dayT = baziDay(d).tronco;
+    const hourBase = (dayT % 5) * 2;
+    const hourIdx = Math.floor(h/2) % 12;
     return [
-      {l:"Anno",  b:baziYear(d.getFullYear())},
-      {l:"Mese",  b:baziMonth(d.getMonth())},
+      {l:"Anno",  b:yearBazi},
+      {l:"Mese",  b:baziMonth(solarMonthIdx, yearBazi.tronco)},
       {l:"Giorno",b:baziDay(d)},
-      {l:"Ora",   b:{tronco:Math.floor(h/2)%10,ramo:Math.floor(h/2)%12}},
+      {l:"Ora",   b:{tronco:(hourBase+hourIdx)%10, ramo:Math.floor(h/2)%12}},
     ];
   })() : null;
 
@@ -1677,13 +1820,22 @@ function SortableList({ items, onReorder, renderItem }) {
 }
 
 // ── Impostazioni ──────────────────────────────────────────────────────────────
-function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, signInEmail, createAccount, signOutUser, signInAnon, events, promemoria }) {
+function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, signInEmail, createAccount, signOutUser, signInAnon, signInWithGoogle, sendPasswordReset, updateUserEmail, events, promemoria }) {
   const dark = cfg.darkMode || false;
   const [section, setSection] = useState(defaultSection);
   const [authMode, setAuthMode] = useState("login"); // login | register
   const [authEmail, setAuthEmail] = useState("");
   const [authPwd, setAuthPwd] = useState("");
+  const [authPwd2, setAuthPwd2] = useState(""); // confirm password
+  const [showPwd, setShowPwd] = useState(false);
   const [authErr, setAuthErr] = useState("");
+  const [authMsg, setAuthMsg] = useState(""); // success message
+  // Change email form
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPwd, setEmailPwd] = useState("");
+  const [emailErr, setEmailErr] = useState("");
+  const [emailMsg, setEmailMsg] = useState("");
   const [newTask, setNewTask] = useState(""), [newTaskDur, setNewTaskDur] = useState(5), [newTaskTipo, setNewTaskTipo] = useState("tempo");
   const [newHabit, setNewHabit] = useState(""), [newHabitUnit, setNewHabitUnit] = useState(""), [newHabitColore, setNewHabitColore] = useState(HABIT_COLORS[0]);
   const [editingTask, setEditingTask] = useState(null), [editLabel, setEditLabel] = useState(""), [editDur, setEditDur] = useState(0), [editTipo, setEditTipo] = useState("tempo");
@@ -1844,6 +1996,14 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <Toggle label="Segno zodiacale della Luna" on={cfg.showLunaZod} onChange={v=>setCfg(c=>({...c,showLunaZod:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="Ekadashi"                   on={cfg.showEk}      onChange={v=>setCfg(c=>({...c,showEk:v}))}/>
+          {cfg.showEk && (
+            <div style={{paddingLeft:14,borderLeft:"2px solid var(--border-sec)"}}>
+              <Toggle label="🔔 Notifica il giorno prima" on={cfg.ekNotif||false} onChange={v=>{
+                if (v && !cfg.reminderEnabled) requestNotifPermission(true);
+                setCfg(c=>({...c,ekNotif:v}));
+              }}/>
+            </div>
+          )}
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="🔔 Promemoria routine" on={cfg.reminderEnabled||false} onChange={requestNotifPermission}/>
           {cfg.reminderEnabled && (
@@ -2021,121 +2181,208 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
       {/* ── Account ── */}
       {section==="account" && (
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
-          {!firebaseEnabled ? (
-            <div style={{padding:"14px 16px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)",textAlign:"center"}}>
-              <div style={{fontSize:14,fontWeight:500,color:"var(--text)",marginBottom:8}}>☁️ Sync non configurato</div>
-              <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6}}>
-                Per attivare il login e la sincronizzazione, configura Firebase in <code style={{fontSize:11,background:"var(--bg-gray)",padding:"1px 5px",borderRadius:3}}>src/firebase.js</code>
-              </div>
-            </div>
-          ) : authUser ? (
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+          {/* Step 1: scegli modalità storage se non ancora scelto */}
+          {cfg.cloudMode === null || cfg.cloudMode === undefined ? (
             <>
-              <div style={{padding:"14px 16px",background:"var(--accent-bg)",borderRadius:12,border:"0.5px solid var(--accent-border)"}}>
-                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
-                  <div style={{width:36,height:36,borderRadius:"50%",background:"var(--accent)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:600,flexShrink:0}}>
-                    {authUser.email ? authUser.email[0].toUpperCase() : "👤"}
-                  </div>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{authUser.email || "Utente anonimo"}</div>
-                    <div style={{fontSize:11,color:"var(--text-sec)",marginTop:2}}>
-                      Sync: {syncStatus==="synced"?"✅ sincronizzato":syncStatus==="syncing"?"⏳ in corso…":syncStatus==="error"?"❌ errore":"◯ offline"}
-                    </div>
-                  </div>
+              <div style={{fontSize:13,color:"var(--text-sec)",lineHeight:1.6,padding:"4px 0"}}>
+                Dove vuoi salvare i tuoi dati?
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div onClick={()=>setCfg(c=>({...c,cloudMode:"cloud"}))} style={{padding:"16px 12px",background:"var(--bg-card)",borderRadius:12,border:"1px solid var(--border-sec)",cursor:"pointer",textAlign:"center",transition:"border-color 0.15s"}}>
+                  <div style={{fontSize:24,marginBottom:6}}>☁️</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>Sul cloud</div>
+                  <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5}}>Sincronizza tra dispositivi. Richiede un account.</div>
+                </div>
+                <div onClick={()=>setCfg(c=>({...c,cloudMode:"local"}))} style={{padding:"16px 12px",background:"var(--bg-card)",borderRadius:12,border:"1px solid var(--border-sec)",cursor:"pointer",textAlign:"center",transition:"border-color 0.15s"}}>
+                  <div style={{fontSize:24,marginBottom:6}}>📱</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>Solo locale</div>
+                  <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5}}>Dati solo su questo dispositivo. Nessun account.</div>
                 </div>
               </div>
-              <button onClick={()=>signOutUser()} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"#e53e3e",border:"0.5px solid #e53e3e44",borderRadius:8,cursor:"pointer"}}>
-                Esci dall'account
+            </>
+          ) : cfg.cloudMode === "local" ? (
+            <>
+              <div style={{padding:"14px 16px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)",textAlign:"center"}}>
+                <div style={{fontSize:20,marginBottom:6}}>📱</div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>Dati locali</div>
+                <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6}}>I tuoi dati sono salvati solo su questo dispositivo.</div>
+              </div>
+              <button onClick={()=>setCfg(c=>({...c,cloudMode:null}))} style={{padding:"10px",fontSize:12,background:"var(--bg-sec)",color:"var(--text-sec)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
+                Cambia modalità storage
               </button>
-              {(()=>{
-                // ICS builder shared by both buttons
-                function buildICS() {
-                  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Ba-Zi Calendar//IT","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Ba-Zi Calendar","X-WR-TIMEZONE:Europe/Rome"];
-                  const allEvts = Object.entries(events||{}).flatMap(([dk,evs])=>(evs||[]).map(ev=>({...ev,dk})));
-                  const allProm = Object.entries(promemoria||{}).flatMap(([dk,proms])=>(proms||[]).filter(p=>!p.fatto).map(p=>({...p,dk})));
-                  const fmt = dk => { const d=new Date(dk); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
-                  const nextDay = dk => { const d=new Date(new Date(dk).getTime()+86400000); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; };
-                  [...allEvts,...allProm].forEach(item=>{
-                    const s=(item.titolo||item.testo||"Evento").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
-                    lines.push("BEGIN:VEVENT",`UID:${item.id}@bazicalendar`,`DTSTAMP:${fmt(new Date().toDateString())}T000000Z`,`DTSTART;VALUE=DATE:${fmt(item.dk)}`,`DTEND;VALUE=DATE:${nextDay(item.dk)}`,`SUMMARY:${s}`,"END:VEVENT");
-                  });
-                  lines.push("END:VCALENDAR");
-                  return lines.join("\r\n");
-                }
-                const count = Object.values(events||{}).flat().length + Object.values(promemoria||{}).flat().filter(p=>!p.fatto).length;
-                return (
-                  <div style={{padding:"14px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)"}}>
-                    <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>📅 Sincronizza con Calendario</div>
-                    <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5,marginBottom:12}}>
-                      Aggiungi i tuoi {count} eventi e promemoria all'app Calendario del telefono. Su iPhone apri il file e scegli "Aggiungi tutti".
-                    </div>
-                    <div style={{display:"flex",gap:8,marginBottom:8}}>
-                      {/* Apple Calendar */}
-                      <button onClick={()=>{
-                        const blob=new Blob([buildICS()],{type:"text/calendar;charset=utf-8"});
-                        const url=URL.createObjectURL(blob);
-                        const a=document.createElement("a"); a.href=url; a.download="bazi-calendar.ics"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                      }} style={{flex:1,padding:"10px 6px",fontSize:12,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                        🍎 Apple Cal
-                      </button>
-                      {/* Google Calendar */}
-                      <button onClick={()=>{
-                        const blob=new Blob([buildICS()],{type:"text/calendar;charset=utf-8"});
-                        const url=URL.createObjectURL(blob);
-                        const a=document.createElement("a"); a.href=url; a.download="bazi-calendar.ics"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                        setTimeout(()=>{ window.open("https://calendar.google.com/calendar/r/settings/export","_blank"); URL.revokeObjectURL(url); },500);
-                      }} style={{flex:1,padding:"10px 6px",fontSize:12,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                        🗓 Google Cal
-                      </button>
-                    </div>
-                    <div style={{fontSize:9,color:"var(--text-ter)",textAlign:"center"}}>
-                      💡 Sincronizzazione live in arrivo — per ora importa il file ogni volta che vuoi aggiornare
-                    </div>
-                  </div>
-                );
-              })()}
             </>
           ) : (
+            /* cloudMode === "cloud" */
             <>
-              <div style={{padding:"14px 16px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)"}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>☁️ Accedi per sincronizzare</div>
-                <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6}}>
-                  Con un account puoi usare l'app su più dispositivi. I dati locali vengono mantenuti anche senza account.
-                </div>
-              </div>
-              <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"0.5px solid var(--border-sec)"}}>
-                {[{k:"login",l:"Accedi"},{k:"register",l:"Registrati"}].map(({k,l})=>(
-                  <div key={k} onClick={()=>{setAuthMode(k);setAuthErr("");}} style={{flex:1,textAlign:"center",padding:"8px",cursor:"pointer",background:authMode===k?"var(--accent)":"transparent",color:authMode===k?"white":"var(--text-sec)",fontSize:12,fontWeight:authMode===k?600:400}}>{l}</div>
-                ))}
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <input type="email" value={authEmail} onChange={e=>{setAuthEmail(e.target.value);setAuthErr("");}} placeholder="Email" style={{fontSize:13}}/>
-                <input type="password" value={authPwd} onChange={e=>{setAuthPwd(e.target.value);setAuthErr("");}} placeholder="Password (min 6 caratteri)"
-                  onKeyDown={e=>e.key==="Enter"&&document.getElementById("btn-auth")?.click()} style={{fontSize:13}}/>
-                {authErr && <div style={{fontSize:11,color:"#e53e3e",padding:"4px 8px"}}>{authErr}</div>}
-                <button id="btn-auth" onClick={async()=>{
-                  setAuthErr("");
-                  try {
-                    if (authMode==="login") await signInEmail(authEmail, authPwd);
-                    else await createAccount(authEmail, authPwd);
-                  } catch(e) {
-                    const msg = e.code==="auth/wrong-password"?"Password errata":
-                                e.code==="auth/user-not-found"?"Email non trovata":
-                                e.code==="auth/email-already-in-use"?"Email già registrata":
-                                e.code==="auth/weak-password"?"Password troppo corta (min 6)":
-                                e.message||"Errore di accesso";
-                    setAuthErr(msg);
-                  }
-                }} style={{padding:"10px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
-                  {authMode==="login"?"Accedi":"Crea account"}
-                </button>
-                <div style={{textAlign:"center"}}>
-                  <button onClick={()=>signInAnon()} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
-                    Continua senza account
+              {authUser ? (
+                /* Loggato */
+                <>
+                  <div style={{padding:"14px 16px",background:"var(--accent-bg)",borderRadius:12,border:"0.5px solid var(--accent-border)"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:36,height:36,borderRadius:"50%",background:"var(--accent)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:600,flexShrink:0}}>
+                        {authUser.email ? authUser.email[0].toUpperCase() : "👤"}
+                      </div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{authUser.email || "Utente anonimo"}</div>
+                        <div style={{fontSize:11,color:"var(--text-sec)",marginTop:2}}>
+                          {syncStatus==="synced"?"✅ sincronizzato":syncStatus==="syncing"?"⏳ in corso…":syncStatus==="error"?"❌ errore":"◯ offline"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reset password */}
+                  {authUser.email && (
+                    <button onClick={async()=>{
+                      try {
+                        await sendPasswordReset(authUser.email);
+                        setAuthMsg("Email inviata a " + authUser.email);
+                      } catch(e) { setAuthErr(e.message||"Errore"); }
+                    }} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",textAlign:"left"}}>
+                      🔑 Reimposta password (via email)
+                    </button>
+                  )}
+
+                  {/* Change email */}
+                  {authUser.email && (
+                    <div>
+                      <button onClick={()=>{setChangeEmailOpen(s=>!s);setEmailErr("");setEmailMsg("");}} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",width:"100%",textAlign:"left"}}>
+                        ✉️ Cambia email {changeEmailOpen?"▲":"▼"}
+                      </button>
+                      {changeEmailOpen && (
+                        <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:8}}>
+                          <input type="email" value={newEmail} onChange={e=>{setNewEmail(e.target.value);setEmailErr("");}} placeholder="Nuova email" style={{fontSize:13}}/>
+                          <div style={{position:"relative"}}>
+                            <input type={showPwd?"text":"password"} value={emailPwd} onChange={e=>{setEmailPwd(e.target.value);setEmailErr("");}} placeholder="Password attuale (per conferma)" style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36}}/>
+                            <button onClick={()=>setShowPwd(s=>!s)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:15,color:"var(--text-sec)",padding:0,lineHeight:1}}>{showPwd?"🙈":"👁"}</button>
+                          </div>
+                          {emailErr && <div style={{fontSize:11,color:"#e53e3e"}}>{emailErr}</div>}
+                          {emailMsg && <div style={{fontSize:11,color:"#4a7c59"}}>{emailMsg}</div>}
+                          <button onClick={async()=>{
+                            setEmailErr(""); setEmailMsg("");
+                            if (!newEmail.trim()) { setEmailErr("Inserisci la nuova email"); return; }
+                            if (!emailPwd) { setEmailErr("Inserisci la password attuale"); return; }
+                            try {
+                              await updateUserEmail(newEmail.trim(), emailPwd);
+                              setEmailMsg("Email aggiornata!"); setChangeEmailOpen(false);
+                            } catch(e) {
+                              setEmailErr(e.code==="auth/wrong-password"?"Password errata":e.code==="auth/email-already-in-use"?"Email già in uso":e.message||"Errore");
+                            }
+                          }} style={{padding:"9px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
+                            Aggiorna email
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {authMsg && <div style={{fontSize:11,color:"#4a7c59",padding:"4px 8px",background:"#f0faf3",borderRadius:6,border:"0.5px solid #4a7c5933"}}>{authMsg}</div>}
+                  {authErr && <div style={{fontSize:11,color:"#e53e3e",padding:"4px 8px"}}>{authErr}</div>}
+
+                  <button onClick={()=>{signOutUser();setAuthMsg("");setAuthErr("");}} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"#e53e3e",border:"0.5px solid #e53e3e44",borderRadius:8,cursor:"pointer"}}>
+                    Esci dall'account
                   </button>
-                </div>
-              </div>
+                  <button onClick={()=>setCfg(c=>({...c,cloudMode:null}))} style={{padding:"8px",fontSize:11,background:"none",color:"var(--text-ter)",border:"none",cursor:"pointer"}}>
+                    Cambia modalità storage
+                  </button>
+                </>
+              ) : (
+                /* Non loggato — form login/registrazione */
+                <>
+                  <div style={{padding:"12px 14px",background:"var(--bg-card)",borderRadius:10,border:"0.5px solid var(--border-sec)"}}>
+                    <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6}}>
+                      ☁️ Accedi o registrati per sincronizzare i dati tra dispositivi.
+                    </div>
+                  </div>
+                  <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:"0.5px solid var(--border-sec)"}}>
+                    {[{k:"login",l:"Accedi"},{k:"register",l:"Registrati"}].map(({k,l})=>(
+                      <div key={k} onClick={()=>{setAuthMode(k);setAuthErr("");setAuthMsg("");}} style={{flex:1,textAlign:"center",padding:"8px",cursor:"pointer",background:authMode===k?"var(--accent)":"transparent",color:authMode===k?"white":"var(--text-sec)",fontSize:12,fontWeight:authMode===k?600:400}}>{l}</div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    <input type="email" value={authEmail} onChange={e=>{setAuthEmail(e.target.value);setAuthErr("");}} placeholder="Email" style={{fontSize:13}}/>
+                    {/* Password field with eye icon */}
+                    <div style={{position:"relative"}}>
+                      <input type={showPwd?"text":"password"} value={authPwd} onChange={e=>{setAuthPwd(e.target.value);setAuthErr("");}}
+                        placeholder="Password (min 6 caratteri)"
+                        onKeyDown={e=>authMode==="login"&&e.key==="Enter"&&document.getElementById("btn-auth")?.click()}
+                        style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36}}/>
+                      <button onClick={()=>setShowPwd(s=>!s)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:15,color:"var(--text-sec)",padding:0,lineHeight:1}}>{showPwd?"🙈":"👁"}</button>
+                    </div>
+                    {/* Conferma password solo in registrazione */}
+                    {authMode==="register" && (
+                      <div style={{position:"relative"}}>
+                        <input type={showPwd?"text":"password"} value={authPwd2} onChange={e=>{setAuthPwd2(e.target.value);setAuthErr("");}}
+                          placeholder="Conferma password"
+                          onKeyDown={e=>e.key==="Enter"&&document.getElementById("btn-auth")?.click()}
+                          style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36,borderColor:authPwd2&&authPwd!==authPwd2?"#e53e3e":undefined}}/>
+                        {authPwd2 && authPwd !== authPwd2 && <span style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"#e53e3e"}}>✗</span>}
+                        {authPwd2 && authPwd === authPwd2 && <span style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"#4a7c59"}}>✓</span>}
+                      </div>
+                    )}
+                    {authErr && <div style={{fontSize:11,color:"#e53e3e",padding:"4px 8px"}}>{authErr}</div>}
+                    {authMsg && <div style={{fontSize:11,color:"#4a7c59",padding:"4px 8px"}}>{authMsg}</div>}
+                    <button id="btn-auth" onClick={async()=>{
+                      setAuthErr(""); setAuthMsg("");
+                      if (authMode==="register" && authPwd !== authPwd2) { setAuthErr("Le password non coincidono"); return; }
+                      try {
+                        if (authMode==="login") await signInEmail(authEmail, authPwd);
+                        else await createAccount(authEmail, authPwd);
+                      } catch(e) {
+                        const msg = e.code==="auth/wrong-password"?"Password errata":
+                                    e.code==="auth/user-not-found"?"Email non trovata":
+                                    e.code==="auth/email-already-in-use"?"Email già registrata":
+                                    e.code==="auth/weak-password"?"Password troppo corta (min 6)":
+                                    e.code==="auth/invalid-email"?"Email non valida":
+                                    e.message||"Errore di accesso";
+                        setAuthErr(msg);
+                      }
+                    }} style={{padding:"10px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
+                      {authMode==="login"?"Accedi":"Crea account"}
+                    </button>
+                    {/* Divider */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,margin:"2px 0"}}>
+                      <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
+                      <span style={{fontSize:10,color:"var(--text-ter)"}}>oppure</span>
+                      <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
+                    </div>
+                    {/* Google sign-in */}
+                    <button onClick={async()=>{
+                      setAuthErr(""); setAuthMsg("");
+                      try { await signInWithGoogle(); }
+                      catch(e) {
+                        if (e.code !== "auth/popup-closed-by-user") setAuthErr(e.message||"Errore Google");
+                      }
+                    }} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:500}}>
+                      <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                      Continua con Google
+                    </button>
+                    {authMode==="login" && (
+                      <div style={{textAlign:"center"}}>
+                        <button onClick={async()=>{
+                          if (!authEmail.trim()) { setAuthErr("Inserisci l'email prima"); return; }
+                          try { await sendPasswordReset(authEmail.trim()); setAuthMsg("Email di reset inviata!"); setAuthErr(""); }
+                          catch(e) { setAuthErr(e.code==="auth/user-not-found"?"Email non trovata":e.message||"Errore"); }
+                        }} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
+                          Password dimenticata?
+                        </button>
+                      </div>
+                    )}
+                    <div style={{display:"flex",justifyContent:"center",gap:16}}>
+                      <button onClick={async()=>{
+                        try { await signInAnon(); } catch(e) { setAuthErr(e.message||"Errore"); }
+                      }} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
+                        Accedi anonimamente
+                      </button>
+                      <button onClick={()=>setCfg(c=>({...c,cloudMode:null}))} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
+                        Torna alla scelta
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -2349,6 +2596,7 @@ export default function App() {
   const [elModal, setElModal] = useState(null);
   const [ekModal, setEkModal] = useState(false);
   const [moonBodyModal, setMoonBodyModal] = useState(false);
+  const [agriModal, setAgriModal] = useState(false);
   const [moonTap, setMoonTap] = useState(false);
   const [annoModal, setAnnoModal] = useState(false);
   const [impTab, setImpTab] = useState("generali");
@@ -2360,7 +2608,7 @@ export default function App() {
   const syncTimerRef = useRef(null);
   const remoteListenerRef = useRef(null);
 
-  const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false,tempUnit:"C",distUnit:"km",lat:41.9,lon:12.5});
+  const [cfg, setCfg]               = useLS("bazi_cfg",         {showGreg:false,showChinese:true,showLunaZod:true,showEk:true,ekNotif:false,darkMode:false,reminderEnabled:false,reminderTime:"07:00",showTronco:true,troncoMode:"chars",showRamo:true,ramoMode:"nomi",accentColor:"#4a7c59",followDayElement:false,tempUnit:"C",distUnit:"km",lat:41.9,lon:12.5,cloudMode:null});
   const [baziPersonal, setBaziPersonal] = useLS("bazi_personal", {data:"",ora:"12"});
   const [note, setNote]             = useLS("bazi_note",         {});
   const [events, setEvents]         = useLS("bazi_events",       {});
@@ -2440,6 +2688,28 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[cfg.reminderEnabled, cfg.reminderTime]);
 
+  // Ekadashi notification — fires at 08:00 the day before (only if cfg.ekNotif is on)
+  useEffect(()=>{
+    if (!cfg.ekNotif || Notification.permission !== "granted") return;
+    const tomorrow = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()+1);
+    if (!isEkadashi(tomorrow)) return;
+    const notifKey = "bazi_ek_notif_" + tomorrow.toDateString();
+    if (localStorage.getItem(notifKey)) return;
+    const target = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate(), 8, 0, 0);
+    const now = new Date();
+    function fire() {
+      localStorage.setItem(notifKey, "1");
+      new Notification("🙏 Domani è Ekadashi", {
+        body: "Giorno di digiuno e purificazione — preparati dalla sera.",
+        icon: "/icon-192.png",
+      });
+    }
+    if (now >= target) { fire(); return; }
+    const id = setTimeout(fire, target.getTime() - now.getTime());
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[cfg.ekNotif, oggi.toDateString()]);
+
   const mesi=lunarMonths(anno), mese=mesi[meseIdx], byYear=baziYear(anno);
 
   function goOggi(){
@@ -2476,27 +2746,36 @@ export default function App() {
       setSyncStatus("syncing");
       try {
         const remote = await loadAllKeys(user.uid);
-        if (remote && Object.keys(remote).length > 0) {
-          // Check if local data exists and compare timestamps
+        if (remote && Object.keys(remote).filter(k=>k!=='__remoteTs').length > 0) {
           const localTs = JSON.parse(localStorage.getItem('bazi_sync_ts')||'{}');
           const localHasData = SYNC_KEYS.some(k => localStorage.getItem(k) !== null);
-          const remoteModified = Object.keys(remote).length;
-          if (localHasData && remoteModified > 0) {
+          if (localHasData) {
             const localLastMod = Math.max(...Object.values(localTs).filter(Boolean), 0);
-            // If local has unsaved changes after last push, show conflict
-            const lastPush = parseInt(localStorage.getItem('bazi_last_push')||'0');
-            if (localLastMod > lastPush + 5000) {
-              setConflictData({ remote, resolve: null });
-              setSyncStatus("offline");
-              return;
+            const remoteTs = remote.__remoteTs || 0;
+            const THRESH = 30000; // 30 seconds
+            if (remoteTs > localLastMod + THRESH) {
+              // Remote clearly newer → apply silently
+              SYNC_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
+            } else if (localLastMod > remoteTs + THRESH) {
+              // Local clearly newer → push to cloud silently
+              const currentData = {
+                bazi_cfg:cfg, bazi_note:note, bazi_events:events,
+                bazi_routine_cfg:routineCfg, bazi_routine_log:routineLog,
+                bazi_routine_del:routineDeleted, bazi_habit_cfg:habitCfg,
+                bazi_habit_log:habitLog, bazi_habit_del:habitDeleted,
+                bazi_todo_lists:todoLists, bazi_todo_del:todoDeleted,
+                bazi_promemoria:promemoria, bazi_personal:baziPersonal,
+              };
+              await Promise.all(SYNC_KEYS.map(k => pushKey(user.uid, k, currentData[k])));
+              localStorage.setItem('bazi_last_push', Date.now().toString());
+            } else {
+              // Timestamps ambiguous or equal — apply remote (safest default)
+              SYNC_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
             }
+          } else {
+            // No local data → apply remote silently
+            SYNC_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
           }
-          // Apply remote data
-          SYNC_KEYS.forEach(k => {
-            if (remote[k] !== undefined && allSetters.current?.[k]) {
-              allSetters.current[k](remote[k]);
-            }
-          });
         } else {
           // First login: push local data to cloud
           const currentData = {
@@ -2518,7 +2797,13 @@ export default function App() {
         });
       } catch(e) {
         console.error('[Sync]', e);
-        setSyncStatus("error");
+        // If offline, keep local data and show offline status
+        if (!navigator.onLine || e.code === 'unavailable' || e.message?.includes('offline')) {
+          setSyncStatus("offline");
+          setConflictData({ remote: null, offline: true });
+        } else {
+          setSyncStatus("error");
+        }
       }
     });
     return ()=>{
@@ -2566,28 +2851,44 @@ export default function App() {
         {/* ── Calendario ─────────────────────────────────────── */}
         {view==="calendario" && (
           <div style={{padding:"1rem"}}>
-            {/* Anno header + Moon widget + Oggi */}
+            {/* Row 1: Anno + Oggi */}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none",flex:1,minWidth:0}}>
+                <div style={{fontSize:18,fontWeight:500,color:"var(--text)",letterSpacing:"0.5px"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
+                <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
+              </div>
+              <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>Oggi</button>
+            </div>
+            {/* Row 2: Luna widget + Agricoltura widget */}
             {(()=>{
               const todayP = moonPhase(oggi);
               const todayMt = moonTimesForDate(oggi, cfg.lat??41.9, cfg.lon??12.5);
               const illum = Math.round(50*(1-Math.cos(todayP/SYNODIC*2*Math.PI)));
+              const todayPhaseStr = moonName(todayP);
+              const todayZod = lunaZodiac(oggi);
+              const mGrego = mese.start.getMonth();
+              const agriData = AGRICOLTURA_MESI[mGrego];
               return (
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                  <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none",flex:1,minWidth:0}}>
-                    <div style={{fontSize:18,fontWeight:500,color:"var(--text)",letterSpacing:"0.5px"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
-                    <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
-                  </div>
-                  <div onClick={()=>setMoonBodyModal(true)} style={{cursor:"pointer",padding:"6px 12px",borderRadius:10,background:"var(--bg-card)",border:"0.5px solid var(--border-sec)",display:"flex",alignItems:"center",gap:8,flexShrink:0,minWidth:150}}>
-                    <span style={{fontSize:20,lineHeight:1,flexShrink:0}}>{moonEmoji(todayP)}</span>
-                    <div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                  {/* Luna widget */}
+                  <div onClick={()=>setMoonBodyModal(true)} style={{cursor:"pointer",padding:"8px 12px",borderRadius:10,background:"var(--bg-card)",border:"0.5px solid var(--border-sec)",display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:22,lineHeight:1,flexShrink:0}}>{moonEmoji(todayP)}</span>
+                    <div style={{minWidth:0}}>
                       <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                         <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{illum}%</span>
-                        <span style={{fontSize:10,color:"var(--text-sec)"}}>{moonName(todayP)}</span>
+                        <span style={{fontSize:10,color:"var(--text-sec)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{todayPhaseStr}</span>
                       </div>
-                      {todayMt && <div style={{fontSize:10,color:"var(--text-ter)",letterSpacing:"0.3px",marginTop:1}}>↑{todayMt.rise} &nbsp;↓{todayMt.set}</div>}
+                      {todayMt && <div style={{fontSize:10,color:"var(--text-ter)",letterSpacing:"0.3px",marginTop:1}}>↑{todayMt.rise} ↓{todayMt.set}</div>}
                     </div>
                   </div>
-                  <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>Oggi</button>
+                  {/* Agricoltura widget */}
+                  <div onClick={()=>setAgriModal(true)} style={{cursor:"pointer",padding:"8px 12px",borderRadius:10,background:dark?"#0d1a0d":"#f0faf3",border:"0.5px solid #4a7c5944",display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:22,lineHeight:1,flexShrink:0}}>{agriData.cover}</span>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:dark?"#81c784":"#4a7c59",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Stagione</div>
+                      <div style={{fontSize:10,color:"var(--text-sec)",marginTop:1}}>{LUNA_ZODIACO_AGRI[todayZod].icon} {LUNA_ZODIACO_AGRI[todayZod].tipo}</div>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
@@ -2812,46 +3113,55 @@ export default function App() {
         {view==="todo"         && <TodoView todoLists={todoLists} setTodoLists={setTodoLists} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} dark={dark}/>}
         {view==="memo"         && <PromemoriaMemoView promemoria={promemoria} setPromemoria={setPromemoria} dark={dark}/>}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
-        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} events={events} promemoria={promemoria}/>}
+        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} signInWithGoogle={signInWithGoogle} sendPasswordReset={sendPasswordReset} updateUserEmail={updateUserEmail} events={events} promemoria={promemoria}/>}
       </div>
 
-      {/* Conflict resolution modal */}
+      {/* Conflict resolution modal — only shown when offline at login */}
       {conflictData && (
         <ModalBox onClose={null} dark={dark} zIndex={500}>
           <div style={{padding:"4px 0 12px",textAlign:"center"}}>
-            <div style={{fontSize:20,marginBottom:8}}>⚠️</div>
-            <div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:6}}>Conflitto dati</div>
+            <div style={{fontSize:20,marginBottom:8}}>{conflictData.offline?"📵":"⚠️"}</div>
+            <div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:6}}>
+              {conflictData.offline?"Sincronizzazione offline":"Conflitto dati"}
+            </div>
             <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6,marginBottom:16}}>
-              Trovati dati sia locali che sul cloud.<br/>Quale versione vuoi usare?
+              {conflictData.offline
+                ? "Non è stato possibile connettersi al cloud. I tuoi dati locali sono al sicuro."
+                : "Trovati dati sia locali che sul cloud. Quale versione vuoi usare?"}
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              <button onClick={()=>{
-                // Use remote data
-                SYNC_KEYS.forEach(k=>{ if(conflictData.remote[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](conflictData.remote[k]); });
-                setConflictData(null); setSyncStatus("synced");
-              }} style={{padding:"10px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
-                ☁️ Usa dati cloud
-              </button>
-              <button onClick={async ()=>{
-                // Push local data to cloud
-                if (!authUser) return;
-                setSyncStatus("syncing");
-                const data = {
-                  bazi_cfg:cfg,bazi_note:note,bazi_events:events,
-                  bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,
-                  bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,
-                  bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,
-                  bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,
-                  bazi_promemoria:promemoria,bazi_personal:baziPersonal,
-                };
-                try {
-                  await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,data[k])));
-                  localStorage.setItem('bazi_last_push',Date.now().toString());
-                  setSyncStatus("synced");
-                } catch { setSyncStatus("error"); }
-                setConflictData(null);
-              }} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
-                📱 Usa dati locali (sovrascrive cloud)
+              {!conflictData.offline && conflictData.remote && (
+                <button onClick={()=>{
+                  SYNC_KEYS.forEach(k=>{ if(conflictData.remote[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](conflictData.remote[k]); });
+                  setConflictData(null); setSyncStatus("synced");
+                }} style={{padding:"10px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
+                  ☁️ Usa dati cloud
+                </button>
+              )}
+              {!conflictData.offline && (
+                <button onClick={async ()=>{
+                  if (!authUser) return;
+                  setSyncStatus("syncing");
+                  const data = {
+                    bazi_cfg:cfg,bazi_note:note,bazi_events:events,
+                    bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,
+                    bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,
+                    bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,
+                    bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,
+                    bazi_promemoria:promemoria,bazi_personal:baziPersonal,
+                  };
+                  try {
+                    await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,data[k])));
+                    localStorage.setItem('bazi_last_push',Date.now().toString());
+                    setSyncStatus("synced");
+                  } catch { setSyncStatus("error"); }
+                  setConflictData(null);
+                }} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
+                  📱 Usa dati locali (sovrascrive cloud)
+                </button>
+              )}
+              <button onClick={()=>{ setConflictData(null); setSyncStatus("offline"); }} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text-sec)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
+                ⏱ Scegli dopo (continua offline)
               </button>
             </div>
           </div>
@@ -2864,6 +3174,7 @@ export default function App() {
       {elModal      && <ElementoModal el={elModal} onClose={()=>setElModal(null)} dark={dark}/>}
       {ekModal      && <EkadashiModal onClose={()=>setEkModal(false)} dark={dark}/>}
       {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
+      {agriModal && <AgricolturaModal meseGrego={mese.start.getMonth()} moonPhaseStr={moonName(moonPhase(oggi))} zodiacIdx={lunaZodiac(oggi)} onClose={()=>setAgriModal(false)} dark={dark}/>}
     </div>
   );
 }

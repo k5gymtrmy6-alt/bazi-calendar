@@ -2,6 +2,9 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth, signInAnonymously, createUserWithEmailAndPassword,
   signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged,
+  sendPasswordResetEmail, updateEmail as fbUpdateEmail,
+  reauthenticateWithCredential, EmailAuthProvider,
+  GoogleAuthProvider, signInWithPopup,
 } from 'firebase/auth';
 import {
   getFirestore, doc, setDoc, collection, getDocs, onSnapshot, serverTimestamp,
@@ -64,6 +67,23 @@ export async function signOutUser() {
   return fbSignOut(_auth);
 }
 
+export async function signInWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  return signInWithPopup(_auth, provider);
+}
+
+export async function sendPasswordReset(email) {
+  return sendPasswordResetEmail(_auth, email);
+}
+
+export async function updateUserEmail(newEmail, currentPassword) {
+  const user = _auth.currentUser;
+  if (!user || !user.email) throw new Error('Nessun utente loggato');
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  return fbUpdateEmail(user, newEmail);
+}
+
 function docRef(uid, lsKey) {
   return doc(_db, 'users', uid, 'data', lsKey);
 }
@@ -82,21 +102,26 @@ export async function loadAllKeys(uid) {
   if (!firebaseEnabled || !uid) return null;
   const snap = await getDocs(collection(_db, 'users', uid, 'data'));
   const out  = {};
+  let maxTs = 0;
   snap.forEach(d => {
-    const { lsKey, value } = d.data();
+    const { lsKey, value, ts } = d.data();
     if (lsKey) {
       try { out[lsKey] = JSON.parse(value); }
       catch { out[lsKey] = value; }
     }
+    if (ts?.toMillis) maxTs = Math.max(maxTs, ts.toMillis());
   });
+  out.__remoteTs = maxTs;
   return out;
 }
 
 export function listenUserData(uid, onChange) {
   if (!firebaseEnabled || !uid) return () => {};
+  let firstBatch = true;
   return onSnapshot(collection(_db, 'users', uid, 'data'), snap => {
+    if (firstBatch) { firstBatch = false; return; }
     snap.docChanges().forEach(ch => {
-      if (ch.type === 'modified') {
+      if (ch.type === 'modified' || ch.type === 'added') {
         const { lsKey, value } = ch.doc.data();
         if (!lsKey) return;
         try { onChange(lsKey, JSON.parse(value)); }
