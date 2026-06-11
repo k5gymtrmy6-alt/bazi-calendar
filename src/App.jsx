@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import SunCalc from "suncalc";
+import { LogoOttagono } from "./assets/icons/index.jsx";
 import {
   firebaseEnabled, onAuthChange, signInAnon, signInEmail, createAccount,
   signOutUser, sendPasswordReset, updateUserEmail, signInWithGoogle,
@@ -96,10 +97,55 @@ const TRONCO_EL = ["legno","legno","fuoco","fuoco","terra","terra","metallo","me
 const RAMO_EL   = ["acqua","terra","legno","legno","terra","fuoco","fuoco","terra","metallo","metallo","terra","acqua"];
 const EL_ORDER  = ["legno","fuoco","terra","metallo","acqua"];
 
+// ── Relazioni cinque elementi 十神 (semplificato) ──────────────────────────────
+// Ciclo generazione: legno→fuoco→terra→metallo→acqua→legno
+// Ciclo controllo:   legno→terra, fuoco→metallo, terra→acqua, metallo→legno, acqua→fuoco
+const EL_GEN=[1,2,3,4,0]; // EL_GEN[i] = elemento generato dall'elemento i
+const EL_CTR=[2,3,4,0,1]; // EL_CTR[i] = elemento controllato dall'elemento i
+// Relazioni complete per ogni elemento (lookup)
+const EL_RELATIONS = Object.fromEntries(EL_ORDER.map((el,i)=>[el,{
+  genera:      EL_ORDER[EL_GEN[i]],
+  generato_da: EL_ORDER[(i+4)%5],
+  controlla:   EL_ORDER[EL_CTR[i]],
+  ctrl_da:     EL_ORDER[(i+3)%5],
+}]));
+function dayRelation(selfEl,dayEl){
+  const s=EL_ORDER.indexOf(selfEl),d=EL_ORDER.indexOf(dayEl);
+  if(s===d)         return"stesso";
+  if(EL_GEN[s]===d) return"esprimo";  // io genero l'elemento del giorno
+  if(EL_CTR[s]===d) return"domino";   // io controllo l'elemento del giorno
+  if(EL_GEN[d]===s) return"nutrito";  // il giorno mi genera/nutre
+  return                  "sfidato";  // il giorno mi controlla/sfida
+}
+const REL_INFO={
+  stesso: {nome:"Compagno",   cin:"比劫",emoji:"🤝",bar:3,
+    desc:"Il giorno rispecchia la tua essenza. Energia familiare, forte senso di sé e indipendenza.",
+    bene:"Decisioni autonome, iniziative personali, riaffermare la propria identità.",
+    cura:"Tendenza ad imporsi sugli altri — bilancia con apertura e ascolto."},
+  nutrito:{nome:"Supporto",   cin:"印星",emoji:"🌿",bar:5,
+    desc:"Il giorno ti nutre e sostiene. L'ambiente lavora per te: recupero e apprendimento facilitati.",
+    bene:"Studio, meditazione, scrittura, riflessione, raccogliere forze interiori.",
+    cura:"Può creare passività — agisci anche quando ti senti già a tuo agio."},
+  esprimo:{nome:"Espressione",cin:"食傷",emoji:"✨",bar:5,
+    desc:"La tua energia fluisce verso il mondo. Giornata creativa: ciò che esprimi trova risonanza.",
+    bene:"Arte, comunicazione, insegnamento, performance, nuovi progetti.",
+    cura:"Rischio dispersione — scegli su cosa concentrare la tua energia creativa."},
+  domino: {nome:"Ricchezza",  cin:"財星",emoji:"💰",bar:4,
+    desc:"Il tuo elemento domina l'energia del giorno. Sei in posizione di forza e lucidità pratica.",
+    bene:"Affari, trattative, gestione risorse, organizzazione, acquisizioni.",
+    cura:"Eccesso di controllo può chiudere opportunità — lascia spazio all'imprevisto."},
+  sfidato:{nome:"Autorità",   cin:"官殺",emoji:"⚖️",bar:2,
+    desc:"Il giorno sfida la tua natura. Struttura esterna, responsabilità e pressione costruttiva.",
+    bene:"Disciplina, doveri formali, crescita sotto pressione, rispetto delle regole.",
+    cura:"Evita conflitti inutili — usa la tensione come carburante per superare i tuoi limiti."},
+};
+
 // Element background — light pastel in light mode, proper dark tint in dark mode
 const ELEMENTI_DARK_BG = { legno:"#111a12", fuoco:"#1a1009", terra:"#1a1709", metallo:"#131314", acqua:"#09101a" };
 function elbg(el, dark) {
-  return dark ? (ELEMENTI_DARK_BG[el] || "#111") : ELEMENTI[el].bg;
+  const e = ELEMENTI[el];
+  if (!e) return dark ? "#1a1a1a" : "#f8f8f6"; // fallback per elemento undefined
+  return dark ? (ELEMENTI_DARK_BG[el] || "#1a1a1a") : e.bg;
 }
 
 function formatDaysAgo(ts) {
@@ -272,7 +318,10 @@ function newMoonsAroundYear(anno) {
 }
 
 function baziDay(d) {
-  const n=Math.floor((d-new Date(1924,1,5))/864e5);
+  // Normalizza a mezzanotte locale per evitare off-by-one da DST (ora legale)
+  const mid = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const ref = new Date(1924,1,5);
+  const n=Math.floor((mid-ref)/864e5);
   return{tronco:((n%10)+10)%10,ramo:((n%12)+12)%12};
 }
 
@@ -349,35 +398,41 @@ function useLS(key, defaultValue) {
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
 // Nav logo: solo taijitu, nessun ottagono, usa currentColor (adattivo come gli altri tab)
+// Home tab logo — ottagono + taijitu, usa currentColor per adattarsi ad attivo/inattivo
 function BaziLogo({ size=28 }) {
   return (
-    <svg viewBox="-22 -22 44 44" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
-      {/* Yang half background (shows nav bg through) */}
-      <circle cx="0" cy="0" r="20" fill="var(--bg)"/>
-      {/* Yin half (currentColor — si colora col tema attivo) */}
-      <path d="M0,-20 A20,20 0 0,0 0,20 A10,10 0 0,1 0,0 A10,10 0 0,0 0,-20 Z" fill="currentColor"/>
-      {/* Light dot in yin area */}
-      <circle cx="0" cy="-10" r="4.5" fill="var(--bg)"/>
-      {/* Dark dot in yang area */}
-      <circle cx="0" cy="10" r="4.5" fill="currentColor"/>
-      {/* Outer circle */}
-      <circle cx="0" cy="0" r="20" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+    <svg viewBox="-32 -32 64 64" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
+      {/* Ottagono */}
+      <polygon points="0,-28 20,-20 28,0 20,20 0,28 -20,20 -28,0 -20,-20"
+        fill="none" stroke="currentColor" strokeWidth="1.4"/>
+      {/* Cerchio intermedio */}
+      <circle cx="0" cy="0" r="20" fill="none" stroke="currentColor" strokeWidth="0.6" opacity="0.35"/>
+      {/* Base yang (sfondo nav trasparisce) */}
+      <circle cx="0" cy="0" r="16" fill="var(--bg)"/>
+      {/* Metà yin */}
+      <path d="M0,-16 A16,16 0 0,0 0,16 A8,8 0 0,1 0,0 A8,8 0 0,0 0,-16 Z" fill="currentColor"/>
+      {/* Pallino chiaro nel lato yin */}
+      <circle cx="0" cy="-8" r="4" fill="var(--bg)"/>
+      {/* Pallino scuro nel lato yang */}
+      <circle cx="0" cy="8" r="4" fill="currentColor"/>
+      {/* Bordo taijitu + curva S */}
+      <circle cx="0" cy="0" r="16" fill="none" stroke="currentColor" strokeWidth="0.8"/>
+      <path d="M0,-16 A8,8 0 0,1 0,0 A8,8 0 0,0 0,16" fill="none" stroke="currentColor" strokeWidth="0.8"/>
+      {/* Pallino verde brand */}
+      <circle cx="22" cy="-22" r="3" fill="#4a7c59"/>
     </svg>
   );
 }
 
-// Ba-Zi tab icon — clean yin-yang outline, size-controlled
+// Ba-Zi tab icon — taijitu con entrambi i pallini visibili
 function IconBaZi({ size=28 }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
-      {/* Outer circle */}
-      <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="5"/>
-      {/* Yin half fill */}
+      <circle cx="50" cy="50" r="44" fill="var(--bg)" stroke="currentColor" strokeWidth="5"/>
       <path d="M50,6 A44,44 0 0,0 50,94 A22,22 0 0,1 50,50 A22,22 0 0,0 50,6 Z" fill="currentColor"/>
-      {/* Light dot */}
-      <circle cx="50" cy="28" r="10" fill="currentColor" opacity="0.12"/>
-      <circle cx="50" cy="28" r="10" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-      {/* Dark dot */}
+      {/* Pallino chiaro (visibile nel lato scuro) */}
+      <circle cx="50" cy="28" r="10" fill="var(--bg)"/>
+      {/* Pallino scuro (visibile nel lato chiaro) */}
       <circle cx="50" cy="72" r="10" fill="currentColor"/>
     </svg>
   );
@@ -511,7 +566,7 @@ function DotsMenu({ render }) {
 }
 function DotsItem({ label, onClick, color }) {
   return (
-    <div onClick={onClick} style={{padding:"13px 18px",fontSize:14,cursor:"pointer",color:color||"var(--text)",borderTop:"0.5px solid var(--border-ter)",display:"flex",alignItems:"center",gap:8,WebkitTapHighlightColor:"transparent"}}>
+    <div onClick={onClick} style={{padding:"13px 18px",fontSize:14,cursor:"pointer",color:color||"var(--text)",borderTop:"1px solid var(--border-sec)",display:"flex",alignItems:"center",gap:8,WebkitTapHighlightColor:"transparent"}}>
       {label}
     </div>
   );
@@ -677,10 +732,10 @@ function AgricolturaModal({ meseGrego, moonPhaseStr, zodiacIdx, onClose, dark })
       <div onClick={()=>setZodiacOpen(s=>!s)} style={{marginBottom:zodiacOpen?8:0,padding:"10px 12px",background:dark?"#1a1a0d":"#fffbeb",borderRadius:10,border:`1px solid ${zodiacOpen?"#8b6914":"#8b691433"}`,cursor:"pointer",userSelect:"none"}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontSize:16}}>{zodAgri.icon}</span>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--text)",flex:1}}>Oggi — Luna in {zodAgri.tipo}</span>
-          <span style={{fontSize:11,color:"var(--text-ter)"}}>{zodiacOpen?"▲":"▼ guida"}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>Oggi — Luna in {zodAgri.tipo}</span>
         </div>
         <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6,marginTop:4}}>{zodAgri.desc}</div>
+        {!zodiacOpen && <div style={{fontSize:10,color:"var(--text-ter)",marginTop:4}}>tocca per saperne di più</div>}
       </div>
       {/* Full zodiac guide — espandibile al tap */}
       {zodiacOpen && (
@@ -1176,7 +1231,7 @@ function TopNav({ view, setView, syncStatus, userEmail, setImpTab, dark=false })
           opacity: isCal ? 1 : 0.38,
           display:"flex",flexDirection:"column",alignItems:"center",
         }}>
-          <BaziLogo size={28}/>
+          <LogoOttagono size={28} theme={dark ? "dark" : "light"}/>
           <div style={{fontSize:10,marginTop:1}}>Home</div>
         </div>
         {/* Nav items */}
@@ -1264,28 +1319,180 @@ function ShichenPicker({ value, onChange, dark }) {
   );
 }
 
+// ── Compatibilità con il Giorno ───────────────────────────────────────────────
+function CompatibilitaGiorno({ dmEl, dark }) {
+  const oggi = new Date();
+  const todayB   = baziDay(oggi);
+  const todayTEl = TRONCO_EL[todayB.tronco];
+  const todayREl = RAMO_EL[todayB.ramo];
+  const tEl = ELEMENTI[todayTEl] || ELEMENTI.terra;   // fallback difensivo
+  const rEl = ELEMENTI[todayREl] || ELEMENTI.acqua;
+  // dmEl può essere undefined/null se la data di nascita è invalida
+  const safeDmEl = dmEl && ELEMENTI[dmEl] ? dmEl : null;
+  const rel     = safeDmEl ? dayRelation(safeDmEl, todayTEl) : null;
+  const info    = rel ? REL_INFO[rel] : null;
+  const dmElObj = safeDmEl ? ELEMENTI[safeDmEl] : null;
+
+  return (
+    <div style={{marginTop:14,background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-ter)",overflow:"hidden"}}>
+      {/* Header */}
+      <div style={{padding:"9px 14px",borderBottom:"0.5px solid var(--border-ter)",display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>☀️ Energia di Oggi</span>
+        <span style={{fontSize:10,color:"var(--text-sec)",marginLeft:"auto"}}>
+          {oggi.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})}
+        </span>
+      </div>
+
+      <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+        {/* Tronco + Ramo del giorno */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div style={{background:elbg(todayTEl,dark),borderRadius:8,padding:"8px 10px",border:`0.5px solid ${tEl.colore}44`}}>
+            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:3}}>Tronco 天干</div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:16,lineHeight:1}}>{TRONCHI_EMOJI[todayB.tronco]}</span>
+              <span style={{fontSize:22,color:dark?"white":tEl.colore,fontWeight:500,lineHeight:1}}>{TRONCHI[todayB.tronco]}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:dark?"rgba(255,255,255,0.9)":tEl.colore}}>{TRONCHI_NOMI[todayB.tronco]}</div>
+                <Badge el={todayTEl}/>
+              </div>
+            </div>
+          </div>
+          <div style={{background:elbg(todayREl,dark),borderRadius:8,padding:"8px 10px",border:`0.5px solid ${rEl.colore}44`}}>
+            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:3}}>Ramo 地支</div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:20,lineHeight:1}}>{ANIMALI_EMOJI[todayB.ramo]}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:dark?"rgba(255,255,255,0.9)":rEl.colore}}>{ANIMALI[todayB.ramo]}</div>
+                <Badge el={todayREl}/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Compatibilità personalizzata (solo se dmEl disponibile) */}
+        {info && dmElObj ? (
+          <div style={{background:elbg(safeDmEl,dark),borderRadius:10,padding:"12px",border:`0.5px solid ${dmElObj.colore}44`}}>
+            {/* 日主 ← emoji → Giorno */}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div style={{flex:1,background:`${dmElObj.colore}18`,borderRadius:6,padding:"6px 8px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:"var(--text-sec)"}}>日主 Tu</div>
+                <div style={{fontSize:28,lineHeight:1.1,color:dark?"white":dmElObj.colore}}>{dmElObj.char}</div>
+                <div style={{fontSize:9,fontWeight:600,color:dark?"rgba(255,255,255,0.8)":dmElObj.colore}}>{dmElObj.nome}</div>
+              </div>
+              <div style={{textAlign:"center",flexShrink:0}}>
+                <div style={{fontSize:28,lineHeight:1}}>{info.emoji}</div>
+              </div>
+              <div style={{flex:1,background:`${tEl.colore}18`,borderRadius:6,padding:"6px 8px",textAlign:"center"}}>
+                <div style={{fontSize:9,color:"var(--text-sec)"}}>Oggi</div>
+                <div style={{fontSize:28,lineHeight:1.1,color:dark?"white":tEl.colore}}>{tEl.char}</div>
+                <div style={{fontSize:9,fontWeight:600,color:dark?"rgba(255,255,255,0.8)":tEl.colore}}>{tEl.nome}</div>
+              </div>
+            </div>
+            {/* Nome relazione + barre energia */}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{info.nome}</div>
+                <div style={{fontSize:10,color:"var(--text-sec)"}}>{info.cin}</div>
+              </div>
+              <div style={{display:"flex",gap:3}}>
+                {Array.from({length:5},(_,i)=>(
+                  <div key={i} style={{width:18,height:5,borderRadius:2,background:i<info.bar?dmElObj.colore:(dark?"#333":"var(--bg-gray2)"),transition:"background 0.2s"}}/>
+                ))}
+              </div>
+            </div>
+            {/* Descrizione */}
+            <div style={{fontSize:12,lineHeight:1.7,color:"var(--text)",marginBottom:8}}>{info.desc}</div>
+            {/* Consigli */}
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              <div style={{fontSize:11,lineHeight:1.5,color:"var(--text-sec)"}}><span style={{color:"var(--accent)",fontWeight:600,marginRight:4}}>✓</span>{info.bene}</div>
+              <div style={{fontSize:11,lineHeight:1.5,color:"var(--text-sec)"}}><span style={{color:"#e07b39",fontWeight:600,marginRight:4}}>⚠</span>{info.cura}</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{textAlign:"center",padding:"10px 12px",background:"var(--bg-wash)",borderRadius:10,border:"0.5px solid var(--border-ter)"}}>
+            <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.7}}>
+              Inserisci la tua data di nascita nel calcolatore<br/>per vedere la compatibilità personale.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Wu Xing Star SVG ─────────────────────────────────────────────────────────
+function WuXingStar({ dark }) {
+  // Pentagon arranged clockwise from top = generation cycle
+  // 木(top) → 火(upper-right) → 土(lower-right) → 金(lower-left) → 水(upper-left)
+  const CX=100, CY=100, R=66, NR=19;
+  const ELS=["legno","fuoco","terra","metallo","acqua"];
+  const ANGS=[-90,-18,54,126,198];
+  const rad=a=>a*Math.PI/180;
+  const pts=ELS.map((el,i)=>({
+    x:+(CX+R*Math.cos(rad(ANGS[i]))).toFixed(1),
+    y:+(CY+R*Math.sin(rad(ANGS[i]))).toFixed(1),
+    c:ELEMENTI[el].colore, bg:dark?ELEMENTI[el].colore+"2a":ELEMENTI[el].bg,
+    ch:ELEMENTI[el].char, nome:ELEMENTI[el].nome,
+  }));
+  function seg(ax,ay,bx,by,d){
+    const dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy),u=d/len;
+    return {x1:ax+dx*u,y1:ay+dy*u,x2:bx-dx*u,y2:by-dy*u};
+  }
+  const GEN=[[0,1],[1,2],[2,3],[3,4],[4,0]];
+  const CTR=[[0,2],[2,4],[4,1],[1,3],[3,0]];
+  return (
+    <svg viewBox="0 0 200 200" width="100%" style={{maxWidth:220,display:"block",margin:"0 auto 2px"}}>
+      <defs>
+        {pts.map((p,i)=>[
+          <marker key={`ag${i}`} id={`ag${i}`} viewBox="0 0 8 6" refX="7" refY="3" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="none" stroke={p.c} strokeWidth="1.3"/>
+          </marker>,
+          <marker key={`ac${i}`} id={`ac${i}`} viewBox="0 0 8 6" refX="7" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="none" stroke={p.c} strokeWidth="1" opacity="0.5"/>
+          </marker>,
+        ])}
+      </defs>
+      {/* Generazione — linee solide */}
+      {GEN.map(([a,b])=>{
+        const s=seg(pts[a].x,pts[a].y,pts[b].x,pts[b].y,NR+3);
+        return <line key={`g${a}${b}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+          stroke={pts[a].c} strokeWidth="2" strokeLinecap="round" markerEnd={`url(#ag${a})`}/>;
+      })}
+      {/* Controllo — linee tratteggiate */}
+      {CTR.map(([a,b])=>{
+        const s=seg(pts[a].x,pts[a].y,pts[b].x,pts[b].y,NR+3);
+        return <line key={`c${a}${b}`} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+          stroke={pts[a].c} strokeWidth="1.5" strokeDasharray="4,3" strokeLinecap="round"
+          markerEnd={`url(#ac${a})`} opacity="0.6"/>;
+      })}
+      {/* Nodi elementi */}
+      {pts.map((p,i)=>(
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r={NR} fill={p.bg} stroke={p.c} strokeWidth="1.8"/>
+          <text x={p.x} y={p.y-1} textAnchor="middle" dominantBaseline="middle"
+            fontSize="14" fontWeight="700" fill={dark?"white":p.c}>{p.ch}</text>
+          <text x={p.x} y={p.y+10} textAnchor="middle"
+            fontSize="6.5" fill={dark?"rgba(255,255,255,0.55)":p.c}>{p.nome}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 // ── Ba-Zi Informazioni Tab ────────────────────────────────────────────────────
 function InfoTabContent({ dark }) {
   const [subtab, setSubtab] = useState("tronchi");
   const [subIdx, setSubIdx] = useState(null);
+  const [elOpen, setElOpen] = useState(null); // accordion 5 elementi
 
   if (subIdx !== null && subtab === "tronchi") return <TroncoModal idx={subIdx} onClose={()=>setSubIdx(null)} dark={dark}/>;
   if (subIdx !== null && subtab === "rami")    return <AnimaleModal idx={subIdx} onClose={()=>setSubIdx(null)} dark={dark}/>;
 
   return (
     <div>
-      {/* Explanatory intro */}
-      <div style={{marginBottom:14,padding:"10px 12px",background:"var(--bg-card)",borderRadius:10,border:"0.5px solid var(--border-ter)"}}>
-        <div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:6,letterSpacing:0.3}}>天干 · 地支</div>
-        <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.75}}>
-          I <strong style={{color:"var(--text)"}}>10 Tronchi Celesti (天干)</strong> esprimono i cinque elementi in polarità Yang e Yin — l'energia del Cielo che scorre nel tempo.<br/>
-          I <strong style={{color:"var(--text)"}}>12 Rami Terrestri (地支)</strong> corrispondono agli animali zodiacali e alle dodici ore del giorno — la risposta della Terra.<br/>
-          Combinati formano il ciclo sessagesimale di <strong style={{color:"var(--text)"}}>60 coppie</strong> che si ripete ogni 60 anni.
-        </div>
-      </div>
       <div style={{display:"flex",gap:4,marginBottom:14}}>
-        {[{k:"tronchi",l:"10 Tronchi 天干"},{k:"rami",l:"12 Rami 地支"}].map(t=>(
-          <button key={t.k} onClick={()=>setSubtab(t.k)} style={{flex:1,fontSize:11,padding:"6px 0",background:subtab===t.k?"var(--accent)":"var(--bg-gray)",color:subtab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:6,cursor:"pointer",fontWeight:subtab===t.k?600:400}}>{t.l}</button>
+        {[{k:"tronchi",l:"10 Tronchi 天干"},{k:"rami",l:"12 Rami 地支"},{k:"wuxing",l:"5 Elem. 五行"}].map(t=>(
+          <button key={t.k} onClick={()=>setSubtab(t.k)} style={{flex:1,fontSize:10,padding:"7px 2px",background:subtab===t.k?"var(--accent)":"var(--bg-gray)",color:subtab===t.k?"white":"var(--text-sec)",border:"none",borderRadius:6,cursor:"pointer",fontWeight:subtab===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
       {subtab==="tronchi" && (
@@ -1326,6 +1533,86 @@ function InfoTabContent({ dark }) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {subtab==="wuxing" && (
+        <div>
+          {/* Wu Xing Star */}
+          <div style={{marginBottom:8}}>
+            <WuXingStar dark={dark}/>
+          </div>
+          {/* Legenda cicli */}
+          <div style={{display:"flex",gap:16,justifyContent:"center",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:"var(--text-sec)"}}>
+              <svg width="26" height="8" style={{flexShrink:0}}>
+                <line x1="1" y1="4" x2="19" y2="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M17,1 L25,4 L17,7" fill="none" stroke="currentColor" strokeWidth="1.3"/>
+              </svg>
+              相生 Generazione
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:"var(--text-sec)"}}>
+              <svg width="26" height="8" style={{flexShrink:0}}>
+                <line x1="1" y1="4" x2="19" y2="4" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4,2.5" strokeLinecap="round"/>
+                <path d="M17,1 L25,4 L17,7" fill="none" stroke="currentColor" strokeWidth="1"/>
+              </svg>
+              相克 Controllo
+            </div>
+          </div>
+          {/* Cinque elementi — accordion */}
+          {Object.entries(ELEMENTI).map(([k,e])=>{
+            const r=EL_RELATIONS[k];
+            const open=elOpen===k;
+            return (
+              <div key={k} style={{marginBottom:5}}>
+                <div onClick={()=>setElOpen(open?null:k)}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",
+                    background:elbg(k,dark),
+                    borderRadius:open?"8px 8px 0 0":8,
+                    border:`0.5px solid ${e.colore}44`,
+                    cursor:"pointer",userSelect:"none"}}>
+                  <span style={{fontSize:26,lineHeight:1,color:dark?"white":e.colore,fontWeight:700}}>{e.char}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:dark?"rgba(255,255,255,0.9)":e.colore}}>{e.nome}</div>
+                    <div style={{fontSize:9,color:"var(--text-sec)",marginTop:2}}>
+                      生 {ELEMENTI[r.genera].char} · 克 {ELEMENTI[r.controlla].char} · 受生 {ELEMENTI[r.generato_da].char} · 受克 {ELEMENTI[r.ctrl_da].char}
+                    </div>
+                  </div>
+                  <span style={{fontSize:11,color:"var(--text-sub)",flexShrink:0}}>{open?"▲":"▼"}</span>
+                </div>
+                {open && (
+                  <div style={{padding:"10px 14px",background:elbg(k,dark),
+                    borderRadius:"0 0 8px 8px",border:`0.5px solid ${e.colore}44`,borderTop:"none"}}>
+                    <div style={{fontSize:11,lineHeight:1.85,color:"var(--text)",whiteSpace:"pre-line",
+                      borderLeft:`3px solid ${e.colore}`,paddingLeft:10,marginBottom:10}}>
+                      {e.essenza}
+                    </div>
+                    {/* Relazioni rapide */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                      {[
+                        {label:"生 Nutre",   el:r.genera,      sym:"→"},
+                        {label:"克 Controlla",el:r.controlla,  sym:"→"},
+                        {label:"受生 Riceve", el:r.generato_da, sym:"←"},
+                        {label:"受克 Cede",   el:r.ctrl_da,     sym:"←"},
+                      ].map(({label,el:relEl,sym})=>{
+                        const re=ELEMENTI[relEl];
+                        return (
+                          <div key={label} style={{background:`${re.colore}14`,borderRadius:6,padding:"5px 8px",
+                            border:`0.5px solid ${re.colore}44`}}>
+                            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:2}}>{label}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:4}}>
+                              <span style={{fontSize:16,color:re.colore,fontWeight:700}}>{re.char}</span>
+                              <span style={{fontSize:10,fontWeight:600,color:re.colore}}>{re.nome}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1413,6 +1700,8 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
               <strong>Pilastro del Giorno</strong> (日主) — è il tuo Sé autentico. L'elemento del Tronco del giorno rappresenta la tua natura fondamentale.
             </div>
           )}
+          {/* Compatibilità con Oggi — sempre visibile, personalizzata se c'è la data di nascita */}
+          <CompatibilitaGiorno dmEl={ris ? TRONCO_EL[ris[2].b.tronco] : null} dark={dark}/>
         </>
       )}
 
@@ -2008,6 +2297,18 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               ))}
             </div>
             <Toggle label="Segui elemento del giorno" on={cfg.followDayElement||false} onChange={v=>setCfg(c=>({...c,followDayElement:v}))}/>
+            {cfg.followDayElement && (()=>{
+              const todayEl=TRONCO_EL[baziDay(new Date()).tronco];
+              const e=ELEMENTI[todayEl];
+              return (
+                <div style={{marginTop:6,padding:"6px 10px",background:elbg(todayEl,dark),borderRadius:8,border:`0.5px solid ${e.colore}44`,display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:10,height:10,borderRadius:"50%",background:e.colore,flexShrink:0}}/>
+                  <span style={{fontSize:11,color:dark?"rgba(255,255,255,0.85)":e.colore,fontWeight:500}}>
+                    Oggi: {e.char} {e.nome} — <span style={{fontWeight:400,color:"var(--text-sec)"}}>il tema segue il pilastro del giorno</span>
+                  </span>
+                </div>
+              );
+            })()}
           </div>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="🌙 Tema scuro" on={cfg.darkMode||false} onChange={v=>setCfg(c=>({...c,darkMode:v}))}/>
@@ -2712,7 +3013,7 @@ export default function App() {
   const [meseIdx, setMeseIdx] = useState(()=>Math.max(0, findTodayMese(lunarMonths(initAnno),oggi)));
   const [selDay, setSelDay] = useState(null);
   const [meseModal, setMeseModal] = useState(false);
-  const [elModal, setElModal] = useState(null);
+  // elModal rimosso — info 5 elementi ora in Ba-Zi → 🗂 Info → 五行
   const [ekModal, setEkModal] = useState(false);
   const [moonBodyModal, setMoonBodyModal] = useState(false);
   const [agriModal, setAgriModal] = useState(false);
@@ -2834,38 +3135,28 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[cfg.ekNotif, oggi.toDateString()]);
 
-  // ── Utility swipe detection (robust: passive:false, captures horizontal before scroll) ──
+  // ── Utility swipe — start+end only, check |dx|>|dy| to distinguish from scroll ──
   useEffect(()=>{
     const TABS = ["routine","habit","todo","memo"];
     if (!TABS.includes(view)) return;
-    const el = document.getElementById('util-swipe-area');
-    if (!el) return;
-    let sx = null, sy = null, dir = null;
-    const onStart = e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; dir = null; };
-    const onMove = e => {
-      if (sx === null) return;
-      const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
-      if (!dir) { if (Math.abs(dx) > Math.abs(dy) + 5) dir = 'h'; else if (Math.abs(dy) > Math.abs(dx) + 5) dir = 'v'; }
-      if (dir === 'h') e.preventDefault();
-    };
+    // Attach to document to bypass inner scroll containers
+    let sx = null, sy = null;
+    const onStart = e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
     const onEnd = e => {
-      if (sx === null || dir !== 'h') { sx = null; return; }
-      const dx = e.changedTouches[0].clientX - sx; sx = null;
-      if (Math.abs(dx) < 38) return;
+      if (sx === null) return;
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      sx = null;
+      if (Math.abs(dx) < 45 || Math.abs(dy) > Math.abs(dx)) return;
       const idx = TABS.indexOf(view);
       if (dx < 0 && idx < TABS.length-1) setView(TABS[idx+1]);
       if (dx > 0 && idx > 0) setView(TABS[idx-1]);
     };
-    const onCancel = () => { sx = null; };
-    el.addEventListener('touchstart', onStart, {passive:true});
-    el.addEventListener('touchmove',  onMove,  {passive:false});
-    el.addEventListener('touchend',   onEnd,   {passive:true});
-    el.addEventListener('touchcancel',onCancel,{passive:true});
+    document.addEventListener('touchstart', onStart, {passive:true});
+    document.addEventListener('touchend', onEnd, {passive:true});
     return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove',  onMove);
-      el.removeEventListener('touchend',   onEnd);
-      el.removeEventListener('touchcancel',onCancel);
+      document.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchend', onEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[view]);
@@ -2900,31 +3191,41 @@ export default function App() {
   // ── Merge helpers ──────────────────────────────────────────────────────────
   function mergeById(cloudArr, localArr) {
     const m = [...(cloudArr||[])];
-    (localArr||[]).forEach(it => { if (!m.find(c=>c.id===it.id)) m.push(it); });
+    (localArr||[]).forEach(it => { if (it?.id && !m.find(c=>c?.id===it.id)) m.push(it); });
     return m;
   }
+  // Merge {date: [{id,...}]} — per eventi e promemoria
   function mergeObjOfArrays(cloudObj, localObj) {
     const m = {...(cloudObj||{})};
     Object.entries(localObj||{}).forEach(([k,arr])=>{
       if (!m[k]) m[k] = arr;
-      else m[k] = mergeById(m[k], arr);
+      else if (Array.isArray(arr)) m[k] = mergeById(m[k], arr);
     });
     return m;
+  }
+  // Merge shallow objects (log per data) — cloud ha precedenza, aggiunge date mancanti dal locale
+  function mergeShallowObj(cloudObj, localObj) {
+    return {...(localObj||{}), ...(cloudObj||{})};
   }
   function mergeData(remote, localData) {
     return {
       bazi_cfg:         remote.bazi_cfg ?? localData.bazi_cfg,
       bazi_personal:    remote.bazi_personal ?? localData.bazi_personal,
-      bazi_note:        mergeObjOfArrays(remote.bazi_note, localData.bazi_note),
+      // Note = {dateString: text} — merge aggiungendo date locali non presenti nel cloud
+      bazi_note:        mergeShallowObj(remote.bazi_note, localData.bazi_note),
+      // Events/promemoria = {dateString: [{id,...}]}
       bazi_events:      mergeObjOfArrays(remote.bazi_events, localData.bazi_events),
       bazi_promemoria:  mergeObjOfArrays(remote.bazi_promemoria, localData.bazi_promemoria),
+      // Cfg = array di oggetti con id
       bazi_routine_cfg: mergeById(remote.bazi_routine_cfg, localData.bazi_routine_cfg),
-      bazi_routine_log: mergeObjOfArrays(remote.bazi_routine_log, localData.bazi_routine_log),
-      bazi_routine_del: mergeById(remote.bazi_routine_del, localData.bazi_routine_del),
       bazi_habit_cfg:   mergeById(remote.bazi_habit_cfg, localData.bazi_habit_cfg),
-      bazi_habit_log:   mergeObjOfArrays(remote.bazi_habit_log, localData.bazi_habit_log),
-      bazi_habit_del:   mergeById(remote.bazi_habit_del, localData.bazi_habit_del),
       bazi_todo_lists:  mergeById(remote.bazi_todo_lists, localData.bazi_todo_lists),
+      // Log = {dateString: {taskId: value}} — cloud ha precedenza
+      bazi_routine_log: mergeShallowObj(remote.bazi_routine_log, localData.bazi_routine_log),
+      bazi_habit_log:   mergeShallowObj(remote.bazi_habit_log, localData.bazi_habit_log),
+      // Del = array di oggetti con id
+      bazi_routine_del: mergeById(remote.bazi_routine_del, localData.bazi_routine_del),
+      bazi_habit_del:   mergeById(remote.bazi_habit_del, localData.bazi_habit_del),
       bazi_todo_del:    mergeById(remote.bazi_todo_del, localData.bazi_todo_del),
     };
   }
@@ -3057,12 +3358,6 @@ export default function App() {
               <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none",flex:1,minWidth:0}}>
                 <div style={{fontSize:18,fontWeight:500,color:"var(--text)",letterSpacing:"0.5px"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
                 <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
-                {/* Cinque elementi compact */}
-                <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>
-                  {Object.entries(ELEMENTI).map(([k,e])=>(
-                    <span key={k} onClick={ev=>{ev.stopPropagation();setElModal(k);}} style={{fontSize:9,background:elbg(k,dark),color:dark?"rgba(255,255,255,0.85)":e.colore,borderRadius:4,padding:"1px 5px",border:`0.5px solid ${e.colore}${dark?"77":"44"}`,cursor:"pointer",fontWeight:500,letterSpacing:"0.2px"}}>{e.char} {e.nome}</span>
-                  ))}
-                </div>
               </div>
               <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>Oggi</button>
             </div>
@@ -3256,6 +3551,41 @@ export default function App() {
                     })()}
                   </div>
 
+                  {/* Compatibilità Ba-Zi personale con il giorno */}
+                  {baziPersonal?.data && (()=>{
+                    const birthD=new Date(baziPersonal.data+"T12:00:00");
+                    if (isNaN(birthD.getTime())) return null; // data non valida
+                    const dmEl=TRONCO_EL[baziDay(birthD).tronco];
+                    if (!dmEl) return null;
+                    const rel=dayRelation(dmEl, el);
+                    const info=REL_INFO[rel];
+                    if (!info) return null;
+                    const dmElObj=ELEMENTI[dmEl];
+                    return (
+                      <div style={{marginBottom:10,padding:"10px 12px",background:elbg(dmEl,dark),borderRadius:8,border:`0.5px solid ${dmElObj.colore}44`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontSize:22,lineHeight:1,flexShrink:0}}>{info.emoji}</span>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:600,color:dark?"rgba(255,255,255,0.88)":dmElObj.colore}}>
+                              {info.nome} <span style={{fontSize:10,fontWeight:400,opacity:0.7}}>{info.cin}</span>
+                            </div>
+                            <div style={{fontSize:10,color:"var(--text-sec)",marginTop:1,lineHeight:1.45}}>{info.desc}</div>
+                          </div>
+                          {/* barre energia verticali */}
+                          <div style={{display:"flex",gap:2,flexShrink:0,alignItems:"flex-end"}}>
+                            {Array.from({length:5},(_,i)=>(
+                              <div key={i} style={{width:5,borderRadius:2,background:i<info.bar?dmElObj.colore:(dark?"#333":"var(--bg-gray2)"),height:i<info.bar?`${8+i*4}px`:"8px"}}/>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:3}}>
+                          <div style={{fontSize:10,lineHeight:1.5,color:"var(--text-sec)"}}><span style={{color:"var(--accent)",fontWeight:600,marginRight:4}}>✓</span>{info.bene}</div>
+                          <div style={{fontSize:10,lineHeight:1.5,color:"var(--text-sec)"}}><span style={{color:"#e07b39",fontWeight:600,marginRight:4}}>⚠</span>{info.cura}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Ekadashi */}
                   {ek && cfg.showEk && (
                     <div onClick={()=>setEkModal(true)} style={{marginBottom:10,padding:"8px 12px",background:dark?"#0d2010":"#f0faf3",borderRadius:8,cursor:"pointer",border:"0.5px solid #2e7d3244",display:"flex",alignItems:"center",gap:8}}>
@@ -3343,9 +3673,12 @@ export default function App() {
                     const localData = {bazi_note:note,bazi_events:events,bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,bazi_promemoria:promemoria,bazi_personal:baziPersonal,bazi_cfg:cfg};
                     const merged = mergeData(conflictData.remote, localData);
                     SYNC_KEYS.forEach(k=>{ if(merged[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](merged[k]); });
-                    setSyncStatus("syncing"); setSyncMsg("Unione dati…");
+                    setSyncStatus("syncing"); setSyncMsg("Unione dati 0%…");
                     try {
-                      await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,merged[k])));
+                      for (let i=0; i<SYNC_KEYS.length; i++) {
+                        await pushKey(authUser.uid, SYNC_KEYS[i], merged[SYNC_KEYS[i]]);
+                        setSyncMsg(`Unione dati ${Math.round((i+1)/SYNC_KEYS.length*100)}%…`);
+                      }
                       localStorage.setItem('bazi_last_push',Date.now().toString());
                       const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
                     } catch { setSyncStatus("error"); setSyncMsg("Errore"); }
@@ -3369,10 +3702,13 @@ export default function App() {
                   <button onClick={async ()=>{
                     // Use local, overwrite cloud
                     if (!authUser) return;
-                    setSyncStatus("syncing"); setSyncMsg("Caricamento dati locali…");
+                    setSyncStatus("syncing"); setSyncMsg("Caricamento 0%…");
                     const data = {bazi_cfg:cfg,bazi_note:note,bazi_events:events,bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,bazi_promemoria:promemoria,bazi_personal:baziPersonal};
                     try {
-                      await Promise.all(SYNC_KEYS.map(k=>pushKey(authUser.uid,k,data[k])));
+                      for (let i=0; i<SYNC_KEYS.length; i++) {
+                        await pushKey(authUser.uid, SYNC_KEYS[i], data[SYNC_KEYS[i]]);
+                        setSyncMsg(`Caricamento ${Math.round((i+1)/SYNC_KEYS.length*100)}%…`);
+                      }
                       localStorage.setItem('bazi_last_push',Date.now().toString());
                       const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
                     } catch { setSyncStatus("error"); setSyncMsg("Errore"); }
@@ -3395,7 +3731,7 @@ export default function App() {
       {/* Modals */}
       {meseModal    && <MeseModal mese={mese} idx={meseIdx} byYear={byYear} onClose={()=>setMeseModal(false)} dark={dark}/>}
       {annoModal    && <AnnoModal anno={anno} byYear={byYear} onClose={()=>setAnnoModal(false)} dark={dark}/>}
-      {elModal      && <ElementoModal el={elModal} onClose={()=>setElModal(null)} dark={dark}/>}
+      {/* ElementoModal rimosso — ora in Ba-Zi → 🗂 Info → 五行 */}
       {ekModal      && <EkadashiModal onClose={()=>setEkModal(false)} dark={dark}/>}
       {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} currentZodiac={lunaZodiac(oggi)} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
       {agriModal && <AgricolturaModal meseGrego={mese.start.getMonth()} moonPhaseStr={moonName(moonPhase(oggi))} zodiacIdx={lunaZodiac(oggi)} onClose={()=>setAgriModal(false)} dark={dark}/>}
