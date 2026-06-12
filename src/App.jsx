@@ -2567,7 +2567,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
   const DeletedNote = () => (
     <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
-      ⚠️ Gli elementi eliminati restano in memoria per <strong>30 giorni</strong>, poi vengono rimossi definitivamente.
+      ⚠️ {L.ui?.routine?.conservati||"Gli elementi eliminati restano in memoria per 30 giorni, poi vengono rimossi definitivamente."}
     </div>
   );
 
@@ -2856,7 +2856,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 </div>
                 <div style={{width:8,height:8,borderRadius:"50%",background:hc,flexShrink:0}}/>
                 {/* Indicatore tipo — solo icona, nessun testo */}
-                <span style={{fontSize:15,flexShrink:0,opacity:0.65}} title={habit.modoSmettere?"Smettere (streak=giorni senza)":"Costruire (streak=giorni con)"}>
+                <span style={{fontSize:15,flexShrink:0,opacity:0.65}} title={habit.modoSmettere?`${L.ui?.impostazioni?.smettere||"Smettere"} (${L.ui?.impostazioni?.streakSenza||"streak=giorni senza"})`: `${L.ui?.impostazioni?.costruire||"Costruire"} (${L.ui?.impostazioni?.streakCon||"streak=giorni con"})`}>
                   {habit.modoSmettere?<IconSmett size={16}/>:<IconCost size={16}/>}
                 </span>
                 <button onClick={()=>{setEditingHabit(habit.id);setEditHLabel(habit.label);setEditHUnit(habit.unita||"");setEditHColore(hc);setEditHSmettere(habit.modoSmettere||false);}} style={{background:"none",border:"none",cursor:"pointer",padding:"2px",lineHeight:1,display:"flex",alignItems:"center"}}><IconEdit size={15}/></button>
@@ -2907,18 +2907,18 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           {cfg.cloudMode === null || cfg.cloudMode === undefined ? (
             <>
               <div style={{fontSize:13,color:"var(--text-sec)",lineHeight:1.6,padding:"4px 0"}}>
-                Dove vuoi salvare i tuoi dati?
+                {L.ui?.account?.doveSalvare || "Dove vuoi salvare i tuoi dati?"}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div onClick={()=>setCfg(c=>({...c,cloudMode:"cloud"}))} style={{padding:"16px 12px",background:"var(--bg-card)",borderRadius:12,border:"1px solid var(--border-sec)",cursor:"pointer",textAlign:"center",transition:"border-color 0.15s"}}>
                   <div style={{fontSize:24,marginBottom:6}}>☁️</div>
-                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>Sul cloud</div>
-                  <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5}}>Sincronizza tra dispositivi. Richiede un account.</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>{L.ui?.account?.cloud || "Sul cloud"}</div>
+                  <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5}}>{L.ui?.account?.cloudDesc || "Sincronizza tra dispositivi. Richiede un account."}</div>
                 </div>
                 <div onClick={()=>setCfg(c=>({...c,cloudMode:"local"}))} style={{padding:"16px 12px",background:"var(--bg-card)",borderRadius:12,border:"1px solid var(--border-sec)",cursor:"pointer",textAlign:"center",transition:"border-color 0.15s"}}>
                   <div style={{fontSize:24,marginBottom:6}}>📱</div>
-                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>Solo locale</div>
-                  <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5}}>Dati solo su questo dispositivo. Nessun account.</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>{L.ui?.account?.locale || "Solo locale"}</div>
+                  <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.5}}>{L.ui?.account?.localeDesc || "Dati solo su questo dispositivo. Nessun account."}</div>
                 </div>
               </div>
             </>
@@ -2926,11 +2926,11 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             <>
               <div style={{padding:"14px 16px",background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-sec)",textAlign:"center"}}>
                 <div style={{fontSize:20,marginBottom:6}}>📱</div>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>Dati locali</div>
-                <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6}}>I tuoi dati sono salvati solo su questo dispositivo.</div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:4}}>{L.ui?.account?.datiLocali || "Dati locali"}</div>
+                <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6}}>{L.ui?.account?.datiLocaliDesc || "I tuoi dati sono salvati solo su questo dispositivo."}</div>
               </div>
               <button onClick={()=>setCfg(c=>({...c,cloudMode:null}))} style={{padding:"10px",fontSize:12,background:"var(--bg-sec)",color:"var(--text-sec)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
-                Cambia modalità storage
+                {L.ui?.account?.cambiaStorage || "Cambia modalità storage"}
               </button>
             </>
           ) : (
@@ -2945,14 +2945,14 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                         {authUser.email ? authUser.email[0].toUpperCase() : "👤"}
                       </div>
                       <div>
-                        <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{authUser.email || "Utente anonimo"}</div>
+                        <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{authUser.email || L.ui?.account?.utenteAnonimo || "Utente anonimo"}</div>
                       </div>
                     </div>
                     {/* Sync status with detail message */}
                     <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",background:"var(--bg-wash)",borderRadius:6}}>
                       <div style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:syncStatus==="synced"?"#4a7c59":syncStatus==="syncing"?"#f59e0b":syncStatus==="error"?"#e53e3e":"#9a9690"}}/>
                       <span style={{fontSize:11,color:"var(--text-sec)",flex:1}}>
-                        {syncMsg || (syncStatus==="synced"?"Sincronizzato":syncStatus==="syncing"?"In corso…":syncStatus==="error"?"Errore di connessione":"Offline")}
+                        {syncMsg || (syncStatus==="synced"?L.ui?.account?.sincronizzato||"Sincronizzato":syncStatus==="syncing"?L.ui?.account?.inCorso||"In corso…":syncStatus==="error"?L.ui?.account?.erroreConnessione||"Errore di connessione":L.ui?.account?.offline||"Offline")}
                       </span>
                     </div>
                   </div>
@@ -2961,20 +2961,22 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   {authUser.email && (
                     !confirmReset ? (
                       <button onClick={()=>setConfirmReset(true)} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",textAlign:"left"}}>
-                        Reimposta password (via email)
+                        {L.ui?.account?.reimpostaPwd || "Reimposta password (via email)"}
                       </button>
                     ) : (
                       <div style={{padding:"12px",background:"var(--bg-wash)",borderRadius:8,border:"0.5px solid var(--border-sec)"}}>
                         <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8,lineHeight:1.5}}>
-                          Invieremo un'email di reset a <strong>{authUser.email}</strong>. Continuare?
+                          {(L.ui?.account?.resetDesc||"Invieremo un'email di reset a {email}. Continuare?").split("{email}")[0]}
+                          <strong>{authUser.email}</strong>
+                          {(L.ui?.account?.resetDesc||"Invieremo un'email di reset a {email}. Continuare?").split("{email}")[1]}
                         </div>
                         <div style={{display:"flex",gap:8}}>
-                          <button onClick={()=>setConfirmReset(false)} style={{flex:1,padding:"7px",fontSize:12,background:"var(--bg-sec)",color:"var(--text-sec)",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer"}}>Annulla</button>
+                          <button onClick={()=>setConfirmReset(false)} style={{flex:1,padding:"7px",fontSize:12,background:"var(--bg-sec)",color:"var(--text-sec)",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer"}}>{L.ui?.annulla||"Annulla"}</button>
                           <button onClick={async()=>{
-                            try { await sendPasswordReset(authUser.email); setAuthMsg("Email inviata!"); }
-                            catch(e) { setAuthErr(e.message||"Errore"); }
+                            try { await sendPasswordReset(authUser.email); setAuthMsg(L.ui?.account?.emailInviata||"Email inviata!"); }
+                            catch(e) { setAuthErr(e.message||L.ui?.account?.errore||"Errore"); }
                             setConfirmReset(false);
-                          }} style={{flex:1,padding:"7px",fontSize:12,background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer",fontWeight:500}}>Conferma</button>
+                          }} style={{flex:1,padding:"7px",fontSize:12,background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer",fontWeight:500}}>{L.ui?.conferma||"Conferma"}</button>
                         </div>
                       </div>
                     )
@@ -2984,29 +2986,29 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   {authUser.email && (
                     <div>
                       <button onClick={()=>{setChangeEmailOpen(s=>!s);setEmailErr("");setEmailMsg("");}} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",width:"100%",textAlign:"left"}}>
-                        ✉️ Cambia email {changeEmailOpen?"▲":"▼"}
+                        ✉️ {L.ui?.account?.cambiaEmail||"Cambia email"} {changeEmailOpen?"▲":"▼"}
                       </button>
                       {changeEmailOpen && (
                         <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:8}}>
-                          <input type="email" value={newEmail} onChange={e=>{setNewEmail(e.target.value);setEmailErr("");}} placeholder="Nuova email" style={{fontSize:13}}/>
+                          <input type="email" value={newEmail} onChange={e=>{setNewEmail(e.target.value);setEmailErr("");}} placeholder={L.ui?.account?.nuovaEmail||"Nuova email"} style={{fontSize:13}}/>
                           <div style={{position:"relative"}}>
-                            <input type={showPwd?"text":"password"} value={emailPwd} onChange={e=>{setEmailPwd(e.target.value);setEmailErr("");}} placeholder="Password attuale (per conferma)" style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36}}/>
+                            <input type={showPwd?"text":"password"} value={emailPwd} onChange={e=>{setEmailPwd(e.target.value);setEmailErr("");}} placeholder={L.ui?.account?.pwdAttualeConferma||"Password attuale (per conferma)"} style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36}}/>
                             <button onClick={()=>setShowPwd(s=>!s)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:15,color:"var(--text-sec)",padding:0,lineHeight:1}}>{showPwd?"🙈":"👁"}</button>
                           </div>
                           {emailErr && <div style={{fontSize:11,color:"#e53e3e"}}>{emailErr}</div>}
                           {emailMsg && <div style={{fontSize:11,color:"#4a7c59"}}>{emailMsg}</div>}
                           <button onClick={async()=>{
                             setEmailErr(""); setEmailMsg("");
-                            if (!newEmail.trim()) { setEmailErr("Inserisci la nuova email"); return; }
-                            if (!emailPwd) { setEmailErr("Inserisci la password attuale"); return; }
+                            if (!newEmail.trim()) { setEmailErr(L.ui?.account?.inserisciNuovaEmail||"Inserisci la nuova email"); return; }
+                            if (!emailPwd) { setEmailErr(L.ui?.account?.inserisciPwdAttuale||"Inserisci la password attuale"); return; }
                             try {
                               await updateUserEmail(newEmail.trim(), emailPwd);
-                              setEmailMsg("Email aggiornata!"); setChangeEmailOpen(false);
+                              setEmailMsg(L.ui?.account?.emailAggiornata||"Email aggiornata!"); setChangeEmailOpen(false);
                             } catch(e) {
-                              setEmailErr(e.code==="auth/wrong-password"?"Password errata":e.code==="auth/email-already-in-use"?"Email già in uso":e.message||"Errore");
+                              setEmailErr(e.code==="auth/wrong-password"?L.ui?.account?.pwdErrata||"Password errata":e.code==="auth/email-already-in-use"?L.ui?.account?.emailGiaInUso||"Email già in uso":e.message||L.ui?.account?.errore||"Errore");
                             }
                           }} style={{padding:"9px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
-                            Aggiorna email
+                            {L.ui?.account?.aggiornaMail||"Aggiorna email"}
                           </button>
                         </div>
                       )}
@@ -3017,10 +3019,10 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   {authErr && <div style={{fontSize:11,color:"#e53e3e",padding:"4px 8px"}}>{authErr}</div>}
 
                   <button onClick={()=>{signOutUser();setAuthMsg("");setAuthErr("");}} style={{padding:"10px",fontSize:13,background:"var(--bg-sec)",color:"#e53e3e",border:"0.5px solid #e53e3e44",borderRadius:8,cursor:"pointer"}}>
-                    Esci dall'account
+                    {L.ui?.account?.esci||"Esci dall'account"}
                   </button>
                   <button onClick={()=>setCfg(c=>({...c,cloudMode:null}))} style={{padding:"8px",fontSize:11,background:"none",color:"var(--text-ter)",border:"none",cursor:"pointer"}}>
-                    Cambia modalità storage
+                    {L.ui?.account?.cambiaStorage||"Cambia modalità storage"}
                   </button>
                 </>
               ) : (
@@ -3028,11 +3030,11 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 <>
                   <div style={{padding:"12px 14px",background:"var(--bg-card)",borderRadius:10,border:"0.5px solid var(--border-sec)"}}>
                     <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6}}>
-                      ☁️ Accedi o registrati per sincronizzare i dati tra dispositivi.
+                      {L.ui?.account?.accediDesc||"☁️ Accedi o registrati per sincronizzare i dati tra dispositivi."}
                     </div>
                   </div>
                   <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:"0.5px solid var(--border-sec)"}}>
-                    {[{k:"login",l:"Accedi"},{k:"register",l:"Registrati"}].map(({k,l})=>(
+                    {[{k:"login",l:L.ui?.account?.accedi||"Accedi"},{k:"register",l:L.ui?.account?.registrati||"Registrati"}].map(({k,l})=>(
                       <div key={k} onClick={()=>{setAuthMode(k);setAuthErr("");setAuthMsg("");}} style={{flex:1,textAlign:"center",padding:"8px",cursor:"pointer",background:authMode===k?"var(--accent)":"transparent",color:authMode===k?"white":"var(--text-sec)",fontSize:12,fontWeight:authMode===k?600:400}}>{l}</div>
                     ))}
                   </div>
@@ -3041,7 +3043,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                     {/* Password field with eye icon */}
                     <div style={{position:"relative"}}>
                       <input type={showPwd?"text":"password"} value={authPwd} onChange={e=>{setAuthPwd(e.target.value);setAuthErr("");}}
-                        placeholder="Password (min 6 caratteri)"
+                        placeholder={L.ui?.account?.pwdMin6||"Password (min 6 caratteri)"}
                         onKeyDown={e=>authMode==="login"&&e.key==="Enter"&&document.getElementById("btn-auth")?.click()}
                         style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36}}/>
                       <button onClick={()=>setShowPwd(s=>!s)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:15,color:"var(--text-sec)",padding:0,lineHeight:1}}>{showPwd?"🙈":"👁"}</button>
@@ -3050,7 +3052,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                     {authMode==="register" && (
                       <div style={{position:"relative"}}>
                         <input type={showPwd?"text":"password"} value={authPwd2} onChange={e=>{setAuthPwd2(e.target.value);setAuthErr("");}}
-                          placeholder="Conferma password"
+                          placeholder={L.ui?.account?.confermaPwd||"Conferma password"}
                           onKeyDown={e=>e.key==="Enter"&&document.getElementById("btn-auth")?.click()}
                           style={{fontSize:13,width:"100%",boxSizing:"border-box",paddingRight:36,borderColor:authPwd2&&authPwd!==authPwd2?"#e53e3e":undefined}}/>
                         {authPwd2 && authPwd !== authPwd2 && <span style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"#e53e3e"}}>✗</span>}
@@ -3061,26 +3063,26 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                     {authMsg && <div style={{fontSize:11,color:"#4a7c59",padding:"4px 8px"}}>{authMsg}</div>}
                     <button id="btn-auth" onClick={async()=>{
                       setAuthErr(""); setAuthMsg("");
-                      if (authMode==="register" && authPwd !== authPwd2) { setAuthErr("Le password non coincidono"); return; }
+                      if (authMode==="register" && authPwd !== authPwd2) { setAuthErr(L.ui?.account?.pwdNonCoincidono||"Le password non coincidono"); return; }
                       try {
                         if (authMode==="login") await signInEmail(authEmail, authPwd);
                         else await createAccount(authEmail, authPwd);
                       } catch(e) {
-                        const msg = e.code==="auth/wrong-password"?"Password errata":
-                                    e.code==="auth/user-not-found"?"Email non trovata":
-                                    e.code==="auth/email-already-in-use"?"Email già registrata":
-                                    e.code==="auth/weak-password"?"Password troppo corta (min 6)":
-                                    e.code==="auth/invalid-email"?"Email non valida":
-                                    e.message||"Errore di accesso";
+                        const msg = e.code==="auth/wrong-password"?L.ui?.account?.pwdErrata||"Password errata":
+                                    e.code==="auth/user-not-found"?L.ui?.account?.emailNonTrovata||"Email non trovata":
+                                    e.code==="auth/email-already-in-use"?L.ui?.account?.emailGiaRegistrata||"Email già registrata":
+                                    e.code==="auth/weak-password"?L.ui?.account?.pwdTroppoCorta||"Password troppo corta (min 6)":
+                                    e.code==="auth/invalid-email"?L.ui?.account?.emailNonValida||"Email non valida":
+                                    e.message||L.ui?.account?.erroreAccesso||"Errore di accesso";
                         setAuthErr(msg);
                       }
                     }} style={{padding:"10px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500}}>
-                      {authMode==="login"?"Accedi":"Crea account"}
+                      {authMode==="login"?L.ui?.account?.accedi||"Accedi":L.ui?.account?.creaAccount||"Crea account"}
                     </button>
                     {/* Divider */}
                     <div style={{display:"flex",alignItems:"center",gap:8,margin:"2px 0"}}>
                       <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
-                      <span style={{fontSize:10,color:"var(--text-ter)"}}>oppure</span>
+                      <span style={{fontSize:10,color:"var(--text-ter)"}}>{L.ui?.account?.oppure||"oppure"}</span>
                       <div style={{flex:1,height:"0.5px",background:"var(--border-sec)"}}/>
                     </div>
                     {/* Google sign-in */}
@@ -3088,31 +3090,31 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                       setAuthErr(""); setAuthMsg("");
                       try { await signInWithGoogle(); }
                       catch(e) {
-                        if (e.code !== "auth/popup-closed-by-user") setAuthErr(e.message||"Errore Google");
+                        if (e.code !== "auth/popup-closed-by-user") setAuthErr(e.message||L.ui?.account?.errore||"Errore Google");
                       }
                     }} style={{padding:"10px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:500}}>
                       <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                      Continua con Google
+                      {L.ui?.account?.continuaGoogle||"Continua con Google"}
                     </button>
                     {authMode==="login" && (
                       <div style={{textAlign:"center"}}>
                         <button onClick={async()=>{
-                          if (!authEmail.trim()) { setAuthErr("Inserisci l'email prima"); return; }
-                          try { await sendPasswordReset(authEmail.trim()); setAuthMsg("Email di reset inviata!"); setAuthErr(""); }
-                          catch(e) { setAuthErr(e.code==="auth/user-not-found"?"Email non trovata":e.message||"Errore"); }
+                          if (!authEmail.trim()) { setAuthErr(L.ui?.account?.inserisciEmailPrima||"Inserisci l'email prima"); return; }
+                          try { await sendPasswordReset(authEmail.trim()); setAuthMsg(L.ui?.account?.emailResetInviata||"Email di reset inviata!"); setAuthErr(""); }
+                          catch(e) { setAuthErr(e.code==="auth/user-not-found"?L.ui?.account?.emailNonTrovata||"Email non trovata":e.message||L.ui?.account?.errore||"Errore"); }
                         }} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
-                          Password dimenticata?
+                          {L.ui?.account?.pwdDimenticata||"Password dimenticata?"}
                         </button>
                       </div>
                     )}
                     <div style={{display:"flex",justifyContent:"center",gap:16}}>
                       <button onClick={async()=>{
-                        try { await signInAnon(); } catch(e) { setAuthErr(e.message||"Errore"); }
+                        try { await signInAnon(); } catch(e) { setAuthErr(e.message||L.ui?.account?.errore||"Errore"); }
                       }} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
-                        Accedi anonimamente
+                        {L.ui?.account?.accediAnonimo||"Accedi anonimamente"}
                       </button>
                       <button onClick={()=>setCfg(c=>({...c,cloudMode:null}))} style={{background:"none",border:"none",fontSize:11,color:"var(--text-ter)",cursor:"pointer",padding:"4px"}}>
-                        Torna alla scelta
+                        {L.ui?.account?.tornaScelta||"Torna alla scelta"}
                       </button>
                     </div>
                   </div>
@@ -3126,17 +3128,17 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
       {/* Routine deleted modal */}
       {showRDel && (
         <ModalBox onClose={()=>setShowRDel(false)} dark={dark} zIndex={400}>
-          <ModalHeader title="🗑 Task eliminati di recente" onClose={()=>setShowRDel(false)}/>
+          <ModalHeader title={`🗑 ${L.ui?.routine?.eliminati||"Task eliminati di recente"}`} onClose={()=>setShowRDel(false)}/>
           <DeletedNote/>
           {recentRDel.length===0
-            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun task eliminato di recente.</div>
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>{L.ui?.routine?.nessunEliminato||"Nessun task eliminato di recente."}</div>
             : recentRDel.map(task=>(
               <div key={task.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,color:"var(--text)"}}>{task.label}</div>
-                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?"rip.":"min"} · {formatDaysAgo(task.deletedAt)}</div>
+                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?L.ui?.routine?.rip||"rip.":L.ui?.routine?.min||"min"} · {formatDaysAgo(task.deletedAt)}</div>
                 </div>
-                <button onClick={()=>{const{deletedAt,...c}=task;setRoutineCfg(prev=>[...prev,c]);setRoutineDeleted(prev=>prev.filter(t=>t.id!==task.id));setShowRDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>{const{deletedAt,...c}=task;setRoutineCfg(prev=>[...prev,c]);setRoutineDeleted(prev=>prev.filter(t=>t.id!==task.id));setShowRDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{L.ui?.ripristina||"Ripristina"}</button>
               </div>
             ))
           }
@@ -3146,17 +3148,17 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
       {/* Habit deleted modal */}
       {showHDel && (
         <ModalBox onClose={()=>setShowHDel(false)} dark={dark} zIndex={400}>
-          <ModalHeader title="🗑 Habit eliminati di recente" onClose={()=>setShowHDel(false)}/>
+          <ModalHeader title={L.ui?.habit?.eliminati||"🗑 Habit eliminati di recente"} onClose={()=>setShowHDel(false)}/>
           <DeletedNote/>
           {recentHDel.length===0
-            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun habit eliminato di recente.</div>
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>{L.ui?.habit?.nessunEliminato||"Nessun habit eliminato di recente."}</div>
             : recentHDel.map(habit=>(
               <div key={habit.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,color:"var(--text)"}}>{habit.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"} · {formatDaysAgo(habit.deletedAt)}</div>
                 </div>
-                <button onClick={()=>{const{deletedAt,...c}=habit;setHabitCfg(prev=>[...prev,c]);setHabitDeleted(prev=>prev.filter(h=>h.id!==habit.id));setShowHDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>{const{deletedAt,...c}=habit;setHabitCfg(prev=>[...prev,c]);setHabitDeleted(prev=>prev.filter(h=>h.id!==habit.id));setShowHDel(false);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{L.ui?.ripristina||"Ripristina"}</button>
               </div>
             ))
           }
@@ -3559,7 +3561,7 @@ export default function App() {
       setAuthUser(user);
       if (!user) { setSyncStatus("offline"); setSyncMsg(""); return; }
       setSyncStatus("syncing");
-      setSyncMsg("Recupero dati dal cloud…");
+      setSyncMsg(i18n.t("ui.sync.recuperoDati"));
       try {
         const remote = await loadAllKeys(user.uid);
         const remoteHasData = remote && Object.keys(remote).filter(k=>k!=='__remoteTs').length > 0;
@@ -3581,18 +3583,18 @@ export default function App() {
           if (neverPushed && hasLocalChanges && localHasPersonal) {
             // Device has pre-existing user data — ask what to do
             setSyncStatus("offline");
-            setSyncMsg("Dati locali trovati");
+            setSyncMsg(i18n.t("ui.sync.datiLocaliTrovati"));
             setConflictData({ remote, offline: false, localCounts: { eventi: localEventsCount, promemoria: localPromsCount, todo: localTodoCount } });
             return; // listener started after user chooses
           }
 
           // No conflict: apply remote data
-          setSyncMsg("Applicazione dati cloud…");
+          setSyncMsg(i18n.t("ui.sync.applicazioneCloud"));
           const DATA_KEYS = SYNC_KEYS.filter(k => k !== 'bazi_cfg' && k !== 'bazi_personal');
           DATA_KEYS.forEach(k => { if (remote[k] !== undefined && allSetters.current?.[k]) allSetters.current[k](remote[k]); });
         } else {
           // First use of this account: push local to cloud
-          setSyncMsg("Prima sincronizzazione…");
+          setSyncMsg(i18n.t("ui.sync.primaSincronizzazione"));
           const currentData = {
             bazi_cfg:cfg, bazi_note:note, bazi_events:events,
             bazi_routine_cfg:routineCfg, bazi_routine_log:routineLog,
@@ -3601,16 +3603,16 @@ export default function App() {
             bazi_todo_lists:todoLists, bazi_todo_del:todoDeleted,
             bazi_promemoria:promemoria, bazi_personal:baziPersonal,
           };
-          setSyncMsg(`Caricamento 0/${SYNC_KEYS.length}…`);
+          setSyncMsg(i18n.t("ui.sync.caricamentoPerc",{n:0}));
           for (let i=0; i<SYNC_KEYS.length; i++) {
             await pushKey(user.uid, SYNC_KEYS[i], currentData[SYNC_KEYS[i]]);
-            setSyncMsg(`Caricamento ${i+1}/${SYNC_KEYS.length}…`);
+            setSyncMsg(i18n.t("ui.sync.caricamentoPerc",{n:Math.round((i+1)/SYNC_KEYS.length*100)}));
           }
           localStorage.setItem('bazi_last_push', Date.now().toString());
         }
         const now = new Date();
         setSyncStatus("synced");
-        setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+        setSyncMsg(i18n.t("ui.sync.sincronizzatoAlle",{time:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`}));
         setLastSyncTime(now);
         // Start real-time listener
         if (remoteListenerRef.current) remoteListenerRef.current();
@@ -3620,10 +3622,10 @@ export default function App() {
       } catch(e) {
         console.error('[Sync]', e);
         if (!navigator.onLine || e.code === 'unavailable' || e.message?.includes('offline')) {
-          setSyncStatus("offline"); setSyncMsg("Offline — dati locali al sicuro");
+          setSyncStatus("offline"); setSyncMsg(i18n.t("ui.sync.offlineSicuro"));
           setConflictData({ remote: null, offline: true });
         } else {
-          setSyncStatus("error"); setSyncMsg("Errore connessione: " + (e.message||"riprovare"));
+          setSyncStatus("error"); setSyncMsg(i18n.t("ui.sync.erroreConnessione",{msg:e.message||"?"}));
         }
       }
     });
@@ -3639,7 +3641,7 @@ export default function App() {
     if (!firebaseEnabled || !authUser) return;
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(async ()=>{
-      setSyncStatus("syncing"); setSyncMsg("Sincronizzando…");
+      setSyncStatus("syncing"); setSyncMsg(i18n.t("ui.sync.sincronizzando"));
       try {
         const data = {
           bazi_cfg:cfg, bazi_note:note, bazi_events:events,
@@ -3653,9 +3655,9 @@ export default function App() {
         localStorage.setItem('bazi_last_push', Date.now().toString());
         const now = new Date();
         setSyncStatus("synced");
-        setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+        setSyncMsg(i18n.t("ui.sync.sincronizzatoAlle",{time:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`}));
         setLastSyncTime(now);
-      } catch(e) { setSyncStatus("error"); setSyncMsg("Errore sincronizzazione"); }
+      } catch(e) { setSyncStatus("error"); setSyncMsg(i18n.t("ui.sync.errore")); }
     }, 2000);
     return ()=>{ if(syncTimerRef.current) clearTimeout(syncTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3980,12 +3982,12 @@ export default function App() {
             <div style={{textAlign:"center",marginBottom:12}}>
               <div style={{fontSize:22,marginBottom:6}}>{conflictData.offline?"📵":"⚡"}</div>
               <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:4}}>
-                {conflictData.offline?"Sincronizzazione offline":"Dati locali trovati"}
+                {conflictData.offline?L.ui?.conflict?.titoloOffline||"Sincronizzazione offline":L.ui?.conflict?.titoloLocale||"Dati locali trovati"}
               </div>
               <div style={{fontSize:12,color:"var(--text-sec)",lineHeight:1.6}}>
                 {conflictData.offline
-                  ? "Connessione al cloud non disponibile. Dati locali al sicuro."
-                  : `Questo dispositivo ha dati non sincronizzati:${conflictData.localCounts ? ` ${conflictData.localCounts.eventi} eventi · ${conflictData.localCounts.promemoria} promemoria · ${conflictData.localCounts.todo} liste` : ""}. Come vuoi procedere?`}
+                  ? (L.ui?.conflict?.descOffline||"Connessione al cloud non disponibile. Dati locali al sicuro.")
+                  : `${L.ui?.conflict?.descLocale||"Questo dispositivo ha dati non sincronizzati. Come vuoi procedere?"}${conflictData.localCounts ? ` (${conflictData.localCounts.eventi}e · ${conflictData.localCounts.promemoria}p · ${conflictData.localCounts.todo}t)` : ""}`}
               </div>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -3996,55 +3998,55 @@ export default function App() {
                     const localData = {bazi_note:note,bazi_events:events,bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,bazi_promemoria:promemoria,bazi_personal:baziPersonal,bazi_cfg:cfg};
                     const merged = mergeData(conflictData.remote, localData);
                     SYNC_KEYS.forEach(k=>{ if(merged[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](merged[k]); });
-                    setSyncStatus("syncing"); setSyncMsg("Unione dati 0%…");
+                    setSyncStatus("syncing"); setSyncMsg(i18n.t("ui.sync.unionePerc",{n:0}));
                     try {
                       for (let i=0; i<SYNC_KEYS.length; i++) {
                         await pushKey(authUser.uid, SYNC_KEYS[i], merged[SYNC_KEYS[i]]);
-                        setSyncMsg(`Unione dati ${Math.round((i+1)/SYNC_KEYS.length*100)}%…`);
+                        setSyncMsg(i18n.t("ui.sync.unionePerc",{n:Math.round((i+1)/SYNC_KEYS.length*100)}));
                       }
                       localStorage.setItem('bazi_last_push',Date.now().toString());
-                      const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
-                    } catch { setSyncStatus("error"); setSyncMsg("Errore"); }
+                      const now=new Date(); setSyncStatus("synced"); setSyncMsg(i18n.t("ui.sync.sincronizzatoAlle",{time:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`}));
+                    } catch { setSyncStatus("error"); setSyncMsg(i18n.t("ui.sync.errore")); }
                     setConflictData(null);
                     if(remoteListenerRef.current) remoteListenerRef.current();
                     remoteListenerRef.current=listenUserData(authUser.uid,(k,v)=>{ if(allSetters.current?.[k]) allSetters.current[k](v); });
                   }} style={{padding:"11px",fontSize:13,background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600}}>
-                    Unisci — aggiungi locale al cloud
+                    {L.ui?.conflict?.unisci||"Unisci — aggiungi locale al cloud"}
                   </button>
                   <button onClick={()=>{
                     // Use cloud data
                     SYNC_KEYS.forEach(k=>{ if(conflictData.remote[k]!==undefined && allSetters.current?.[k]) allSetters.current[k](conflictData.remote[k]); });
                     localStorage.setItem('bazi_last_push',Date.now().toString());
-                    const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
+                    const now=new Date(); setSyncStatus("synced"); setSyncMsg(i18n.t("ui.sync.sincronizzatoAlle",{time:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`}));
                     setConflictData(null);
                     if(remoteListenerRef.current) remoteListenerRef.current();
                     remoteListenerRef.current=listenUserData(authUser.uid,(k,v)=>{ if(allSetters.current?.[k]) allSetters.current[k](v); });
                   }} style={{padding:"11px",fontSize:13,background:"var(--bg-sec)",color:"var(--text)",border:"0.5px solid var(--border-sec)",borderRadius:8,cursor:"pointer"}}>
-                    Cancella locale — usa solo cloud
+                    {L.ui?.conflict?.cancellaLocale||"Cancella locale — usa solo cloud"}
                   </button>
                   <button onClick={async ()=>{
                     // Use local, overwrite cloud
                     if (!authUser) return;
-                    setSyncStatus("syncing"); setSyncMsg("Caricamento 0%…");
+                    setSyncStatus("syncing"); setSyncMsg(i18n.t("ui.sync.caricamentoPerc",{n:0}));
                     const data = {bazi_cfg:cfg,bazi_note:note,bazi_events:events,bazi_routine_cfg:routineCfg,bazi_routine_log:routineLog,bazi_routine_del:routineDeleted,bazi_habit_cfg:habitCfg,bazi_habit_log:habitLog,bazi_habit_del:habitDeleted,bazi_todo_lists:todoLists,bazi_todo_del:todoDeleted,bazi_promemoria:promemoria,bazi_personal:baziPersonal};
                     try {
                       for (let i=0; i<SYNC_KEYS.length; i++) {
                         await pushKey(authUser.uid, SYNC_KEYS[i], data[SYNC_KEYS[i]]);
-                        setSyncMsg(`Caricamento ${Math.round((i+1)/SYNC_KEYS.length*100)}%…`);
+                        setSyncMsg(i18n.t("ui.sync.caricamentoPerc",{n:Math.round((i+1)/SYNC_KEYS.length*100)}));
                       }
                       localStorage.setItem('bazi_last_push',Date.now().toString());
-                      const now=new Date(); setSyncStatus("synced"); setSyncMsg(`Sincronizzato alle ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`);
-                    } catch { setSyncStatus("error"); setSyncMsg("Errore"); }
+                      const now=new Date(); setSyncStatus("synced"); setSyncMsg(i18n.t("ui.sync.sincronizzatoAlle",{time:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`}));
+                    } catch { setSyncStatus("error"); setSyncMsg(i18n.t("ui.sync.errore")); }
                     setConflictData(null);
                     if(remoteListenerRef.current) remoteListenerRef.current();
                     remoteListenerRef.current=listenUserData(authUser.uid,(k,v)=>{ if(allSetters.current?.[k]) allSetters.current[k](v); });
                   }} style={{padding:"11px",fontSize:13,background:"var(--bg-card)",color:"var(--text)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
-                    Sovrascrivi cloud con locale
+                    {L.ui?.conflict?.sovrascriviCloud||"Sovrascrivi cloud con locale"}
                   </button>
                 </>
               )}
-              <button onClick={()=>{ setConflictData(null); setSyncStatus("offline"); setSyncMsg("Offline — scegli in un secondo momento"); }} style={{padding:"10px",fontSize:12,background:"transparent",color:"var(--text-ter)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
-                Scegli dopo (continua offline)
+              <button onClick={()=>{ setConflictData(null); setSyncStatus("offline"); setSyncMsg(i18n.t("ui.sync.scegliDopo")); }} style={{padding:"10px",fontSize:12,background:"transparent",color:"var(--text-ter)",border:"0.5px solid var(--border-ter)",borderRadius:8,cursor:"pointer"}}>
+                {L.ui?.conflict?.scegliDopo||"Scegli dopo (continua offline)"}
               </button>
             </div>
           </div>
