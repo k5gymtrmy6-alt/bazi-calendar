@@ -1,6 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 import SunCalc from "suncalc";
+import { useTranslation } from "react-i18next";
+import i18n from "./i18n/index.js";
 import { LogoOttagono } from "./assets/icons/index.jsx";
+
+// Locale context — provides translated data objects to all sub-components
+const LC = createContext(null);
+function useL() { return useContext(LC); }
 import {
   firebaseEnabled, onAuthChange, signInAnon, signInEmail, createAccount,
   signOutUser, sendPasswordReset, updateUserEmail, signInWithGoogle,
@@ -257,6 +263,10 @@ function moonPhase(d) {
 function moonEmoji(p) { if(p<1.85)return"🌑";if(p<5.54)return"🌒";if(p<9.22)return"🌓";if(p<12.91)return"🌔";if(p<16.61)return"🌕";if(p<20.30)return"🌖";if(p<23.99)return"🌗";if(p<27.68)return"🌘";return"🌑"; }
 function moonName(p) { if(p<1.85)return"Luna Nuova";if(p<5.54)return"Crescente";if(p<9.22)return"Primo Quarto";if(p<12.91)return"Gibbosa Crescente";if(p<16.61)return"Luna Piena";if(p<20.30)return"Gibbosa Calante";if(p<23.99)return"Ultimo Quarto";if(p<27.68)return"Calante";return"Luna Nuova"; }
 function moonKey(p) { const H=0.7,nm=p>SYNODIC-H?p-SYNODIC:p; if(Math.abs(nm)<=H)return"🌑";if(Math.abs(p-7.38)<=H)return"🌓";if(Math.abs(p-14.77)<=H)return"🌕";if(Math.abs(p-22.15)<=H)return"🌗";return""; }
+// Translated display name for a moon phase key (Italian key → current locale label)
+function moonDisplayName(phaseKey) {
+  return i18n.t(`moonPhaseNames.${phaseKey}`, { defaultValue: phaseKey });
+}
 // Use ecliptic longitude for accurate tropical zodiac sign (0=Ariete...11=Pesci)
 function lunaZodiac(d) {
   const t = dateToJD(d) - 2451545.0;
@@ -285,6 +295,59 @@ function liChunDate(year) {
   const jde   = veJDE - 44.02; // Li Chun ≈ 44 days before vernal equinox
   const utc   = new Date((jde - 2440587.5) * 86400000);
   return new Date(utc.getFullYear(), utc.getMonth(), utc.getDate()); // local midnight
+}
+
+// ── 24 Jieqi (节气) — precise Ba-Zi month boundaries ─────────────────────────
+// Solar longitude of the Sun (Meeus simplified, accuracy ~0.01°)
+function solarLongitude(jd) {
+  const T  = (jd - 2451545.0) / 36525.0;
+  const L0 = ((280.46646 + 36000.76983*T + 0.0003032*T*T) % 360 + 360) % 360;
+  const M  = ((357.52911 + 35999.05029*T - 0.0001537*T*T) % 360 + 360) % 360 * RAD;
+  const C  = (1.914602 - 0.004817*T - 0.000014*T*T)*Math.sin(M)
+           + (0.019993 - 0.000101*T)*Math.sin(2*M)
+           + 0.000289*Math.sin(3*M);
+  return ((L0 + C) % 360 + 360) % 360;
+}
+// Find JD when sun reaches targetLon° (Newton's method, ±1 min accuracy)
+function solarTermJDE(year, targetLon) {
+  const lcJD = dateToJD(liChunDate(year)); // anchor at Li Chun = 315°
+  const deltaLon = ((targetLon - 315) % 360 + 360) % 360;
+  let jd = lcJD + deltaLon / 360 * 365.25;
+  for (let i = 0; i < 30; i++) {
+    let diff = targetLon - solarLongitude(jd);
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    const step = diff / 360 * 365.25;
+    jd += step;
+    if (Math.abs(step) < 1/1440) break;
+  }
+  return jd;
+}
+// Solar longitudes of the 12 "Jie" that open each Ba-Zi solar month
+// Month 0=Yin (立春315°), 1=Mao (惊蛰345°), ..., 11=Chou (小寒285°)
+const JIEQI_LONS = [315,345,15,45,75,105,135,165,195,225,255,285];
+const _baziJieqiCache = {};
+function getBaziJieqi(year) {
+  if (_baziJieqiCache[year]) return _baziJieqiCache[year];
+  const dates = JIEQI_LONS.map(lon => {
+    const jd = solarTermJDE(year, lon);
+    const d  = new Date((jd - 2440587.5) * 86400000);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  });
+  _baziJieqiCache[year] = dates;
+  return dates;
+}
+// Returns 0–11: Ba-Zi solar month index for a given date (0=Yin…11=Chou)
+function baziSolarMonthIdx(d) {
+  const y = d.getFullYear();
+  let best = { idx: 11, date: getBaziJieqi(y - 1)[11] };
+  for (let yr = y - 1; yr <= y; yr++) {
+    const jq = getBaziJieqi(yr);
+    for (let i = 0; i < 12; i++) {
+      if (jq[i] <= d && jq[i] > best.date) best = { idx: i, date: jq[i] };
+    }
+  }
+  return best.idx;
 }
 
 // ── Astronomical New Moons (Jean Meeus Ch.49, accuracy ±2 min) ────────────────
@@ -608,8 +671,10 @@ function ElementoModal({ el, onClose, dark }) {
 }
 
 function TroncoModal({ idx, onClose, dark }) {
+  const L = useL() || {};
   const t = TRONCHI_INFO[idx];
   const e = ELEMENTI[t.el];
+  const desc = (L.tronchiInfo?.[idx]?.desc) || t.desc;
   return (
     <ModalBox onClose={onClose} zIndex={600} elKey={t.el} dark={dark}>
       <ModalHeader title={`${TRONCHI[idx]} ${t.nome}`} onClose={onClose}/>
@@ -617,18 +682,21 @@ function TroncoModal({ idx, onClose, dark }) {
         <Badge el={t.el} size="md"/>
         <span style={{fontSize:12,color:"var(--text-sec)"}}>{t.polarita}</span>
       </div>
-      <div style={{fontSize:13,lineHeight:1.8,color:"var(--text)",borderLeft:`3px solid ${e.colore}`,paddingLeft:12}}>{t.desc}</div>
+      <div style={{fontSize:13,lineHeight:1.8,color:"var(--text)",borderLeft:`3px solid ${e.colore}`,paddingLeft:12}}>{desc}</div>
     </ModalBox>
   );
 }
 
 function AnimaleModal({ idx, onClose, dark }) {
+  const L = useL() || {};
   const a = ANIMALI_INFO[idx];
   const e = ELEMENTI[a.el];
+  const nomeLocale = (L.animali?.[idx]) || a.nome;
+  const tratti = (L.animaliInfo?.[idx]?.tratti) || a.tratti;
   return (
     <ModalBox onClose={onClose} zIndex={600} elKey={a.el} dark={dark}>
-      <ModalHeader title={`${a.emoji} ${a.nome}`} onClose={onClose}/>
-      <div style={{fontSize:13,lineHeight:1.8,color:"var(--text)",borderLeft:`3px solid ${e.colore}`,paddingLeft:12,marginBottom:12}}>{a.tratti}</div>
+      <ModalHeader title={`${a.emoji} ${nomeLocale}`} onClose={onClose}/>
+      <div style={{fontSize:13,lineHeight:1.8,color:"var(--text)",borderLeft:`3px solid ${e.colore}`,paddingLeft:12,marginBottom:12}}>{tratti}</div>
       <div style={{fontSize:11,color:e.colore,background:`${e.colore}18`,borderRadius:8,padding:"6px 10px"}}>🕐 Ore associate: {a.ore}</div>
     </ModalBox>
   );
@@ -651,19 +719,21 @@ function EkadashiModal({ onClose, dark }) {
 }
 
 function MoonBodyModal({ currentPhase, currentZodiac, onClose, dark }) {
-  const phases = Object.entries(LUNA_CORPO);
-  const currentInfo = LUNA_CORPO[currentPhase];
+  const L = useL() || {};
+  const lunaCorpo = L.lunaCorpo || LUNA_CORPO;
+  const uiL = L.ui?.luna || {};
+  const phases = Object.entries(LUNA_CORPO); // always use Italian keys for order
+  const currentInfo = lunaCorpo[currentPhase];
   return (
     <ModalBox onClose={onClose} dark={dark} zIndex={400}>
-      <ModalHeader title="🌙 Luna & Corpo" onClose={onClose}/>
-      {/* Current phase card at top */}
+      <ModalHeader title={uiL.lunacorpoTitolo || "🌙 Luna & Corpo"} onClose={onClose}/>
       {currentInfo && (
         <div style={{marginBottom:12,padding:"12px",background:"var(--accent-22)",borderRadius:12,border:"1px solid var(--accent-44)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <span style={{fontSize:24,lineHeight:1}}>{currentInfo.em}</span>
+            <span style={{fontSize:24,lineHeight:1}}>{LUNA_CORPO[currentPhase]?.em}</span>
             <div>
-              <div style={{fontSize:14,fontWeight:700,color:"var(--accent)"}}>{currentPhase}</div>
-              <span style={{fontSize:9,background:"var(--accent)",color:"white",borderRadius:4,padding:"1px 7px"}}>oggi</span>
+              <div style={{fontSize:14,fontWeight:700,color:"var(--accent)"}}>{moonDisplayName(currentPhase)}</div>
+              <span style={{fontSize:9,background:"var(--accent)",color:"white",borderRadius:4,padding:"1px 7px"}}>{L.ui?.oggi || "oggi"}</span>
             </div>
           </div>
           {[["🧬",currentInfo.corpo],["🌱",currentInfo.natura],["🧘",currentInfo.psiche]].map(([ico,txt],k)=>(
@@ -674,17 +744,16 @@ function MoonBodyModal({ currentPhase, currentZodiac, onClose, dark }) {
         </div>
       )}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {phases.filter(([ph])=>ph!==currentPhase).map(([ph,info])=>{
-          const isCurrent = false;
+        {phases.filter(([ph])=>ph!==currentPhase).map(([ph])=>{
+          const info = lunaCorpo[ph] || LUNA_CORPO[ph];
           return (
-            <div key={ph} style={{borderRadius:10,border:`0.5px solid ${isCurrent?"var(--accent)":"var(--border-ter)"}`,overflow:"hidden",background:isCurrent?(dark?"#0d1f12":"#f0faf3"):"var(--bg-card)"}}>
-              <div style={{padding:"8px 12px",background:isCurrent?"var(--accent-22)":"var(--bg-wash)",display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:16}}>{info.em}</span>
-                <span style={{fontSize:12,fontWeight:600,color:isCurrent?"var(--accent)":"var(--text)"}}>{ph}</span>
-                {isCurrent && <span style={{fontSize:9,background:"var(--accent)",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:"auto"}}>ora</span>}
+            <div key={ph} style={{borderRadius:10,border:"0.5px solid var(--border-ter)",overflow:"hidden",background:"var(--bg-card)"}}>
+              <div style={{padding:"8px 12px",background:"var(--bg-wash)",display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:16}}>{LUNA_CORPO[ph]?.em}</span>
+                <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{moonDisplayName(ph)}</span>
               </div>
               <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:4}}>
-                {[["🧬",info.corpo,"corpo"],["🌱",info.natura,"natura"],["🧘",info.psiche,"psiche"]].map(([ico,txt,k])=>(
+                {[["🧬",info?.corpo],["🌱",info?.natura],["🧘",info?.psiche]].map(([ico,txt],k)=>(
                   <div key={k} style={{fontSize:11,lineHeight:1.6,color:"var(--text)"}}>
                     <span style={{marginRight:4}}>{ico}</span>{txt}
                   </div>
@@ -699,13 +768,19 @@ function MoonBodyModal({ currentPhase, currentZodiac, onClose, dark }) {
 }
 
 function AgricolturaModal({ meseGrego, moonPhaseStr, zodiacIdx, onClose, dark }) {
-  const mData = AGRICOLTURA_MESI[meseGrego] || AGRICOLTURA_MESI[0];
-  const lunaAgri = LUNA_AGRICOLTURA[moonPhaseStr] || LUNA_AGRICOLTURA["Crescente"];
-  const zodAgri = LUNA_ZODIACO_AGRI[zodiacIdx] || LUNA_ZODIACO_AGRI[0];
+  const L = useL() || {};
+  const agriMesi  = L.agricolturaMesi  || AGRICOLTURA_MESI;
+  const lunaAgriT = L.lunaAgricoltura  || LUNA_AGRICOLTURA;
+  const zodAgriT  = L.lunaZodiacoAgri  || LUNA_ZODIACO_AGRI;
+  const uiA = L.ui?.agricoltura || {};
+  const mData   = agriMesi[meseGrego]           || agriMesi[0];
+  const lunaAgri = lunaAgriT[moonPhaseStr]      || lunaAgriT["Crescente"];
+  const zodAgri  = zodAgriT[zodiacIdx]          || zodAgriT[0];
   const [zodiacOpen, setZodiacOpen] = useState(false);
   return (
     <ModalBox onClose={onClose} zIndex={400} elKey="legno" dark={dark}>
-      <ModalHeader title={`🌱 Agricoltura — ${mData.nome}`} onClose={onClose}/>
+      <ModalHeader title={`🌱 ${uiA.titolo || "Agricoltura"} — ${mData.nome}`} onClose={onClose}/>
+      <div style={{fontSize:10,color:"var(--text-sub)",textAlign:"center",marginBottom:8}}>{uiA.stagionale || "🌍 Stagionale emisfero nord · Italia"}</div>
       {/* Monthly produce */}
       <div style={{marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:600,color:"var(--text-sec)",marginBottom:6}}>🧺 Prodotti di stagione</div>
@@ -719,38 +794,38 @@ function AgricolturaModal({ meseGrego, moonPhaseStr, zodiacIdx, onClose, dark })
       <div style={{marginBottom:14,padding:"10px 12px",background:dark?"#0d1a0d":"#f0faf3",borderRadius:10,border:"0.5px solid #4a7c5944"}}>
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
           <span style={{fontSize:16}}>{lunaAgri.icon}</span>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{moonPhaseStr}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{moonDisplayName(moonPhaseStr)}</span>
         </div>
         <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6,marginBottom:6}}>{lunaAgri.note}</div>
-        {[["🌱 Semina",lunaAgri.semina],["✂️ Potatura",lunaAgri.potatura],["🧺 Raccolta",lunaAgri.raccolta]].map(([label,val])=>(
+        {[[uiA.semina||"🌱 Semina",lunaAgri.semina],[uiA.potatura||"✂️ Potatura",lunaAgri.potatura],[uiA.raccolta||"🧺 Raccolta",lunaAgri.raccolta]].map(([label,val])=>(
           <div key={label} style={{fontSize:11,color:"var(--text)",marginBottom:3}}>
             <span style={{fontWeight:600}}>{label}: </span>{val}
           </div>
         ))}
       </div>
-      {/* Today's zodiac — tocca per vedere la guida completa */}
+      {/* Today's zodiac */}
       <div onClick={()=>setZodiacOpen(s=>!s)} style={{marginBottom:zodiacOpen?8:0,padding:"10px 12px",background:dark?"#1a1a0d":"#fffbeb",borderRadius:10,border:`1px solid ${zodiacOpen?"#8b6914":"#8b691433"}`,cursor:"pointer",userSelect:"none"}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontSize:16}}>{zodAgri.icon}</span>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>Oggi — Luna in {zodAgri.tipo}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{uiA.lunaIn||"Oggi — Luna in"} {zodAgri.tipo}</span>
         </div>
         <div style={{fontSize:11,color:"var(--text-sec)",lineHeight:1.6,marginTop:4}}>{zodAgri.desc}</div>
-        {!zodiacOpen && <div style={{fontSize:10,color:"var(--text-ter)",marginTop:4}}>tocca per saperne di più</div>}
       </div>
-      {/* Full zodiac guide — espandibile al tap */}
+      {/* Full zodiac guide */}
       {zodiacOpen && (
         <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:4}}>
-          {Object.entries(LUNA_ZODIACO_AGRI).map(([idx,z])=>{
+          {Object.entries(LUNA_ZODIACO_AGRI).map(([idx])=>{
+            const z = zodAgriT[parseInt(idx)] || zodAgriT[idx] || LUNA_ZODIACO_AGRI[idx];
             const isCurr = parseInt(idx)===zodiacIdx;
             return (
               <div key={idx} style={{padding:"7px 10px",borderRadius:8,background:isCurr?(dark?"#1a2a0a":"#f0faf3"):"var(--bg-card)",border:`0.5px solid ${isCurr?"#4a7c59":"var(--border-ter)"}`,display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{fontSize:14,flexShrink:0}}>{z.icon}</span>
+                <span style={{fontSize:14,flexShrink:0}}>{z?.icon}</span>
                 <div>
                   <div style={{fontSize:11,fontWeight:600,color:isCurr?"#4a7c59":"var(--text)",marginBottom:1}}>
-                    {["Ariete","Toro","Gemelli","Cancro","Leone","Vergine","Bilancia","Scorpione","Sagittario","Capricorno","Acquario","Pesci"][parseInt(idx)]} — {z.tipo}
-                    {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>ora</span>}
+                    {z?.desc?.split(" — ")[0]} — {z?.tipo}
+                    {isCurr && <span style={{fontSize:9,background:"#4a7c59",color:"white",borderRadius:4,padding:"1px 5px",marginLeft:5}}>{L.ui?.oggi||"ora"}</span>}
                   </div>
-                  <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z.desc}</div>
+                  <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5}}>{z?.desc}</div>
                 </div>
               </div>
             );
@@ -823,7 +898,7 @@ function InfoModal({ onClose, dark }) {
           <p style={{marginBottom:10,color:"var(--text-sec)"}}><strong>Ba-Zi (八字)</strong> — "Otto Caratteri". Quattro pilastri:</p>
           {[
             {l:"Anno 年",d:"Energia sociale, karma familiare, come il mondo ti percepisce. Definisce il tuo animale zodiacale."},
-            {l:"Mese 月",d:"Carriera, ambizioni, energia del padre. Il ciclo delle stagioni della tua vita."},
+            {l:"Mese 月",d:"Ambiente di crescita, relazione con i genitori, carriera e ambizioni. Il ciclo delle stagioni professionali."},
             {l:"Giorno 日",d:"Il pilastro più personale: il Sé autentico e le relazioni con il partner."},
             {l:"Ora 時",d:"Pensieri interiori, figli, desideri nascosti, percorso spirituale."},
           ].map((p,i)=>(
@@ -1321,25 +1396,28 @@ function ShichenPicker({ value, onChange, dark }) {
 
 // ── Compatibilità con il Giorno ───────────────────────────────────────────────
 function CompatibilitaGiorno({ dmEl, dark }) {
+  const L = useL() || {};
+  const relInfoL = L.relInfo || REL_INFO;
+  const uiB = L.ui?.bazi || {};
   const oggi = new Date();
   const todayB   = baziDay(oggi);
   const todayTEl = TRONCO_EL[todayB.tronco];
   const todayREl = RAMO_EL[todayB.ramo];
-  const tEl = ELEMENTI[todayTEl] || ELEMENTI.terra;   // fallback difensivo
+  const tEl = ELEMENTI[todayTEl] || ELEMENTI.terra;
   const rEl = ELEMENTI[todayREl] || ELEMENTI.acqua;
-  // dmEl può essere undefined/null se la data di nascita è invalida
   const safeDmEl = dmEl && ELEMENTI[dmEl] ? dmEl : null;
   const rel     = safeDmEl ? dayRelation(safeDmEl, todayTEl) : null;
-  const info    = rel ? REL_INFO[rel] : null;
+  const relRaw  = rel ? REL_INFO[rel] : null;
+  const info    = rel ? { ...relRaw, ...(relInfoL[rel] || {}) } : null;
   const dmElObj = safeDmEl ? ELEMENTI[safeDmEl] : null;
 
   return (
     <div style={{marginTop:14,background:"var(--bg-card)",borderRadius:12,border:"0.5px solid var(--border-ter)",overflow:"hidden"}}>
       {/* Header */}
       <div style={{padding:"9px 14px",borderBottom:"0.5px solid var(--border-ter)",display:"flex",alignItems:"center",gap:6}}>
-        <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>☀️ Energia di Oggi</span>
+        <span style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{uiB.energiaOggi||"☀️ Energia di Oggi"}</span>
         <span style={{fontSize:10,color:"var(--text-sec)",marginLeft:"auto"}}>
-          {oggi.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})}
+          {oggi.toLocaleDateString(i18n.language||"it-IT",{weekday:"short",day:"numeric",month:"short"})}
         </span>
       </div>
 
@@ -1347,7 +1425,7 @@ function CompatibilitaGiorno({ dmEl, dark }) {
         {/* Tronco + Ramo del giorno */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
           <div style={{background:elbg(todayTEl,dark),borderRadius:8,padding:"8px 10px",border:`0.5px solid ${tEl.colore}44`}}>
-            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:3}}>Tronco 天干</div>
+            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:3}}>{uiB.tronco||"Tronco 天干"}</div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:16,lineHeight:1}}>{TRONCHI_EMOJI[todayB.tronco]}</span>
               <span style={{fontSize:22,color:dark?"white":tEl.colore,fontWeight:500,lineHeight:1}}>{TRONCHI[todayB.tronco]}</span>
@@ -1358,11 +1436,11 @@ function CompatibilitaGiorno({ dmEl, dark }) {
             </div>
           </div>
           <div style={{background:elbg(todayREl,dark),borderRadius:8,padding:"8px 10px",border:`0.5px solid ${rEl.colore}44`}}>
-            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:3}}>Ramo 地支</div>
+            <div style={{fontSize:9,color:"var(--text-sec)",marginBottom:3}}>{uiB.ramo||"Ramo 地支"}</div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:20,lineHeight:1}}>{ANIMALI_EMOJI[todayB.ramo]}</span>
               <div>
-                <div style={{fontSize:11,fontWeight:600,color:dark?"rgba(255,255,255,0.9)":rEl.colore}}>{ANIMALI[todayB.ramo]}</div>
+                <div style={{fontSize:11,fontWeight:600,color:dark?"rgba(255,255,255,0.9)":rEl.colore}}>{(L.animali||ANIMALI)[todayB.ramo]}</div>
                 <Badge el={todayREl}/>
               </div>
             </div>
@@ -1375,7 +1453,7 @@ function CompatibilitaGiorno({ dmEl, dark }) {
             {/* 日主 ← emoji → Giorno */}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               <div style={{flex:1,background:`${dmElObj.colore}18`,borderRadius:6,padding:"6px 8px",textAlign:"center"}}>
-                <div style={{fontSize:9,color:"var(--text-sec)"}}>日主 Tu</div>
+                <div style={{fontSize:9,color:"var(--text-sec)"}}>{uiB.tuSelf||"日主 Tu"}</div>
                 <div style={{fontSize:28,lineHeight:1.1,color:dark?"white":dmElObj.colore}}>{dmElObj.char}</div>
                 <div style={{fontSize:9,fontWeight:600,color:dark?"rgba(255,255,255,0.8)":dmElObj.colore}}>{dmElObj.nome}</div>
               </div>
@@ -1383,7 +1461,7 @@ function CompatibilitaGiorno({ dmEl, dark }) {
                 <div style={{fontSize:28,lineHeight:1}}>{info.emoji}</div>
               </div>
               <div style={{flex:1,background:`${tEl.colore}18`,borderRadius:6,padding:"6px 8px",textAlign:"center"}}>
-                <div style={{fontSize:9,color:"var(--text-sec)"}}>Oggi</div>
+                <div style={{fontSize:9,color:"var(--text-sec)"}}>{L.ui?.oggi||"Oggi"}</div>
                 <div style={{fontSize:28,lineHeight:1.1,color:dark?"white":tEl.colore}}>{tEl.char}</div>
                 <div style={{fontSize:9,fontWeight:600,color:dark?"rgba(255,255,255,0.8)":tEl.colore}}>{tEl.nome}</div>
               </div>
@@ -1623,29 +1701,45 @@ function InfoTabContent({ dark }) {
 function BaziView({ dark, baziPersonal, setBaziPersonal }) {
   const [tab, setTab] = useState("calcola");
   const [shichenOpen, setShichenOpen] = useState(false);
-  const {data="", ora="12"} = baziPersonal || {};
+  const [lmtOpen, setLmtOpen] = useState(false);
+  const {data="", ora="12", lonNascita="", fusoNascita=""} = baziPersonal || {};
   function setData(v){setBaziPersonal(p=>({...p,data:v}));}
   function setOra(v){setBaziPersonal(p=>({...p,ora:v}));setShichenOpen(false);}
+  function setLon(v){setBaziPersonal(p=>({...p,lonNascita:v}));}
+  function setFusoN(v){setBaziPersonal(p=>({...p,fusoNascita:v}));}
+
+  // LMT correction: each 15° of longitude = 1 hour from UTC
+  const lonVal    = lonNascita !== "" ? parseFloat(lonNascita) : NaN;
+  const tzVal     = fusoNascita !== "" ? parseFloat(fusoNascita) : (!isNaN(lonVal) ? Math.round(lonVal / 15) : NaN);
+  const lmtDeltaH = !isNaN(lonVal) && !isNaN(tzVal) ? lonVal / 15 - tzVal : 0;
+  const lmtDeltaMin = Math.round(lmtDeltaH * 60);
+  const hasLmt = !isNaN(lonVal);
+  // Corrected LMT display (for UI only, not for Ba-Zi calc — that uses hLmt)
+  const lmtRaw  = ((parseInt(ora) || 0) + lmtDeltaH + 48) % 24;
+  const lmtHH   = String(Math.floor(lmtRaw)).padStart(2,"0");
+  const lmtMM   = String(Math.round((lmtRaw % 1) * 60)).padStart(2,"0");
 
   const ris = data ? (()=>{
-    const d=new Date(data+"T12:00:00"), h=parseInt(ora);
-    // Fix 1: pass Date so Li Chun boundary is respected
-    const yearBazi = baziYear(d);
-    // Fix 2: Ba-Zi month via days since Li Chun (solar terms, ~30.44d each)
-    const baziY = yearBazi.tronco !== undefined
-      ? d < liChunDate(d.getFullYear()) ? d.getFullYear()-1 : d.getFullYear()
-      : d.getFullYear();
-    const daysSinceLiChun = (d - liChunDate(baziY)) / 86400000;
-    const solarMonthIdx = ((Math.floor(daysSinceLiChun / 30.4368) % 12) + 12) % 12;
-    // Fix 3: 五鼠遁日法 — hour stem depends on day stem
-    const dayT = baziDay(d).tronco;
+    const d = new Date(data+"T12:00:00");
+    const h = parseInt(ora);
+    // LMT correction: adjust birth hour to Local Mean Time
+    let hLmt = h + lmtDeltaH, dLmt = d;
+    if (hasLmt) {
+      if (hLmt < 0)   { hLmt += 24; dLmt = new Date(d.getTime() - 86400000); }
+      if (hLmt >= 24) { hLmt -= 24; dLmt = new Date(d.getTime() + 86400000); }
+    }
+    // Precise month via astronomical 24 Jieqi (节气)
+    const yearBazi      = baziYear(dLmt);
+    const solarMonthIdx = baziSolarMonthIdx(dLmt);
+    // 五鼠遁日法 — hour stem depends on day stem
+    const dayT     = baziDay(dLmt).tronco;
     const hourBase = (dayT % 5) * 2;
-    const hourIdx = Math.floor(h/2) % 12;
+    const hourIdx  = Math.floor(hLmt / 2) % 12;
     return [
       {l:"Anno",  b:yearBazi},
       {l:"Mese",  b:baziMonth(solarMonthIdx, yearBazi.tronco)},
-      {l:"Giorno",b:baziDay(d)},
-      {l:"Ora",   b:{tronco:(hourBase+hourIdx)%10, ramo:Math.floor(h/2)%12}},
+      {l:"Giorno",b:baziDay(dLmt)},
+      {l:"Ora",   b:{tronco:(hourBase+hourIdx)%10, ramo:Math.floor(hLmt/2)%12}},
     ];
   })() : null;
 
@@ -1679,6 +1773,35 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
             ) : (
               <ShichenPicker value={ora} onChange={setOra} dark={dark}/>
             )}
+            {/* LMT correction — collapsibile */}
+            <div style={{marginTop:8}}>
+              <div onClick={()=>setLmtOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",borderRadius:8,background:"var(--bg-wash)",border:"0.5px solid var(--border-ter)",cursor:"pointer",userSelect:"none"}}>
+                <span style={{fontSize:11,color:"var(--text-sec)"}}>📍 Luogo di nascita — correzione LMT{hasLmt ? ` (${lmtDeltaMin >= 0 ? "+" : ""}${lmtDeltaMin} min)` : ""}</span>
+                <span style={{fontSize:10,color:"var(--text-ter)"}}>{lmtOpen?"▲":"▼"}</span>
+              </div>
+              {lmtOpen && (
+                <div style={{padding:"10px",background:"var(--bg-wash)",borderRadius:"0 0 8px 8px",border:"0.5px solid var(--border-ter)",borderTop:"none"}}>
+                  <div style={{fontSize:10,color:"var(--text-sec)",lineHeight:1.5,marginBottom:8}}>
+                    Il Ba-Zi usa l'<strong>ora solare locale (LMT)</strong>, non quella dell'orologio. Inserisci la longitudine del luogo di nascita per una correzione precisa del Pilastro dell'Ora.
+                  </div>
+                  <div style={{display:"flex",gap:8,marginBottom:hasLmt?6:0}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>Longitudine (°E positivo, °W negativo)</div>
+                      <input type="number" placeholder="es. 12.5 Roma · 9.2 Milano" value={lonNascita} onChange={e=>setLon(e.target.value)} min="-180" max="180" step="0.1" style={{width:"100%",fontSize:12,padding:"5px 8px",borderRadius:6,border:"0.5px solid var(--border)"}}/>
+                    </div>
+                    <div style={{width:72}}>
+                      <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>Fuso UTC</div>
+                      <input type="number" placeholder="auto" value={fusoNascita} onChange={e=>setFusoN(e.target.value)} min="-12" max="14" step="0.5" style={{width:"100%",fontSize:12,padding:"5px 8px",borderRadius:6,border:"0.5px solid var(--border)"}}/>
+                    </div>
+                  </div>
+                  {hasLmt && (
+                    <div style={{fontSize:10,color:"var(--text-sec)",background:"var(--accent-bg)",borderRadius:6,padding:"5px 8px",border:"0.5px solid var(--accent-border)"}}>
+                      Correzione: {lmtDeltaMin >= 0 ? "+" : ""}{lmtDeltaMin} min → Ora solare: {lmtHH}:{lmtMM} LMT
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             {ris && (
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginTop:10}}>
                 {ris.map(({l,b})=>{
@@ -1688,7 +1811,7 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
                       <div style={{fontSize:10,color:"var(--text-sec)",marginBottom:3}}>{l}</div>
                       <div style={{fontSize:26,color:dark?"white":ELEMENTI[el].colore}}>{TRONCHI[b.tronco]}</div>
                       <div style={{fontSize:22,color:dark?"white":ELEMENTI[el].colore}}>{RAMI[b.ramo]}</div>
-                      <div style={{fontSize:10,color:dark?"rgba(255,255,255,0.75)":ELEMENTI[el].colore,marginTop:2}}>{ANIMALI[b.ramo]}</div>
+                      <div style={{fontSize:10,color:dark?"rgba(255,255,255,0.75)":ELEMENTI[el].colore,marginTop:2}}>{(L.animali||ANIMALI)[b.ramo]}</div>
                     </div>
                   );
                 })}
@@ -1718,7 +1841,7 @@ function BaziView({ dark, baziPersonal, setBaziPersonal }) {
           </div>
           {[
             {ico:"📅",tit:"Anno (年)",desc:"Energia sociale, karma familiare, come il mondo ti percepisce. Definisce il tuo animale zodiacale."},
-            {ico:"🗓",tit:"Mese (月)",desc:"Formazione, ambiente d'infanzia, relazione con i genitori. Indica le influenze nella crescita."},
+            {ico:"🗓",tit:"Mese (月)",desc:"Ambiente di crescita, relazione con i genitori, carriera e ambizioni. Il ciclo delle stagioni professionali."},
             {ico:"☀️",tit:"Giorno (日)",desc:"Il tuo Sé autentico. Il Tronco del giorno è il tuo elemento dominante — la tua natura fondamentale."},
             {ico:"⏰",tit:"Ora (時)",desc:"Il tuo mondo interiore, aspirazioni, relazioni con i figli. Ciò che cerchi nella vita."},
           ].map(({ico,tit,desc})=>(
@@ -2222,8 +2345,176 @@ function SortableList({ items, onReorder, renderItem }) {
   );
 }
 
+// ── Onboarding ────────────────────────────────────────────────────────────────
+const ONBOARDING_STEPS = [
+  { key:"intro",     icon:"☯️",  setup:false },
+  { key:"home",      icon:"🏠",  setup:false },
+  { key:"bazi",      icon:"☯️",  setup:false },
+  { key:"luna",      icon:"🌙",  setup:false },
+  { key:"utility",   icon:"🛠️", setup:false },
+  { key:"posizione", icon:"📍",  setup:true  },
+  { key:"nascita",   icon:"🎂",  setup:true  },
+  { key:"lingua",    icon:"🌐",  setup:true  },
+  { key:"tema",      icon:"🎨",  setup:true  },
+];
+
+function OnboardingModal({ cfg, setCfg, baziPersonal, setBaziPersonal, onClose, dark }) {
+  const L = useL() || {};
+  const uiO = L.ui?.onboarding || {};
+  const passi = uiO.passi || {};
+  const [step, setStep] = useState(0);
+  const [birthDate, setBirthDate] = useState(baziPersonal?.data || "");
+  const [birthHour, setBirthHour] = useState(baziPersonal?.ora || "12");
+  const [localLat, setLocalLat] = useState(String(cfg.lat ?? 41.9));
+  const [localLon, setLocalLon] = useState(String(cfg.lon ?? 12.5));
+  const [detecting, setDetecting] = useState(false);
+  const total = ONBOARDING_STEPS.length;
+  const cur   = ONBOARDING_STEPS[step];
+
+  function finish() {
+    // Persist collected settings
+    if (birthDate) setBaziPersonal(p => ({...p, data: birthDate, ora: birthHour}));
+    const lat = parseFloat(localLat), lon = parseFloat(localLon);
+    if (!isNaN(lat) && !isNaN(lon)) setCfg(c => ({...c, lat, lon}));
+    setCfg(c => ({...c, onboardingDone: true}));
+    onClose();
+  }
+
+  function detectPos() {
+    if (!navigator.geolocation) return;
+    setDetecting(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => { setLocalLat(pos.coords.latitude.toFixed(4)); setLocalLon(pos.coords.longitude.toFixed(4)); setDetecting(false); },
+      ()  => setDetecting(false),
+      { timeout: 8000 }
+    );
+  }
+
+  const inputStyle = { width:"100%", fontSize:14, padding:"10px 12px", borderRadius:10,
+    border:"0.5px solid var(--border-sec)", background:"var(--bg-card)", color:"var(--text)", boxSizing:"border-box" };
+  const langBtnStyle = (active) => ({ flex:1, padding:"10px 4px", borderRadius:10, cursor:"pointer", textAlign:"center",
+    background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",
+    color:active?"white":"var(--text-sec)", border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,
+    fontSize:12, fontWeight:active?600:400, transition:"all 0.15s" });
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:dark?"#0d0d0d":"#ffffff",
+      display:"flex",flexDirection:"column",overflowY:"auto"}}>
+
+      {/* Progress bar */}
+      <div style={{height:3,background:"var(--bg-gray)",flexShrink:0}}>
+        <div style={{height:"100%",background:"var(--accent)",width:`${((step+1)/total)*100}%`,transition:"width 0.35s"}}/>
+      </div>
+
+      {/* Header with skip */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 20px",flexShrink:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:"var(--accent)"}}>
+          {step+1} / {total}
+        </div>
+        <button onClick={finish} style={{fontSize:12,color:"var(--text-ter)",background:"none",border:"none",cursor:"pointer",padding:"4px 8px"}}>
+          {uiO.salta || "Salta"}
+        </button>
+      </div>
+
+      {/* Content */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        padding:"1rem 1.75rem",textAlign:"center",maxWidth:440,margin:"0 auto",width:"100%"}}>
+
+        {/* Icon */}
+        <div style={{fontSize:52,marginBottom:20,lineHeight:1}}>{cur.icon}</div>
+
+        {/* Title + description */}
+        <div style={{fontSize:20,fontWeight:700,marginBottom:10,color:"var(--text)",lineHeight:1.3}}>
+          {passi[cur.key]?.titolo || cur.key}
+        </div>
+        <div style={{fontSize:14,color:"var(--text-sec)",lineHeight:1.7,marginBottom:24}}>
+          {passi[cur.key]?.desc || ""}
+        </div>
+
+        {/* Setup controls */}
+        {cur.key === "posizione" && (
+          <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:4,textAlign:"left"}}>{L.ui?.impostazioni?.latitudine||"Latitudine"}</div>
+                <input type="number" value={localLat} onChange={e=>setLocalLat(e.target.value)} step="0.001" style={inputStyle}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:4,textAlign:"left"}}>{L.ui?.impostazioni?.longitudine||"Longitudine"}</div>
+                <input type="number" value={localLon} onChange={e=>setLocalLon(e.target.value)} step="0.001" style={inputStyle}/>
+              </div>
+            </div>
+            <button onClick={detectPos} disabled={detecting} style={{...inputStyle,
+              background:"var(--accent)",color:"white",border:"none",cursor:"pointer",fontWeight:600,fontSize:13}}>
+              {detecting ? "…" : `📡 ${L.ui?.impostazioni?.rilevaPosizione||"Rileva posizione"}`}
+            </button>
+          </div>
+        )}
+
+        {cur.key === "nascita" && (
+          <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
+            <input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} style={inputStyle}/>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:6}}>{L.ui?.bazi?.oraLabel||"Ora di nascita:"}</div>
+              <ShichenPicker value={birthHour} onChange={setBirthHour} dark={dark}/>
+            </div>
+          </div>
+        )}
+
+        {cur.key === "lingua" && (
+          <div style={{display:"flex",gap:8,width:"100%"}}>
+            {[{k:"it",l:"🇮🇹 Italiano"},{k:"en",l:"🇬🇧 English"},{k:"es",l:"🇪🇸 Español"}].map(({k,l})=>(
+              <div key={k} onClick={()=>i18n.changeLanguage(k)} style={langBtnStyle(i18n.language===k||i18n.language.startsWith(k))}>{l}</div>
+            ))}
+          </div>
+        )}
+
+        {cur.key === "tema" && (
+          <div style={{display:"flex",gap:12,width:"100%"}}>
+            {[{k:false,l:"☀️",label:"Light"},{k:true,l:"🌙",label:"Dark"}].map(({k,l,label})=>(
+              <div key={String(k)} onClick={()=>setCfg(c=>({...c,darkMode:k}))}
+                style={{flex:1,padding:"20px 8px",borderRadius:12,cursor:"pointer",textAlign:"center",
+                  background:dark===k?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",
+                  color:dark===k?"white":"var(--text-sec)",
+                  border:`1px solid ${dark===k?"var(--accent)":"var(--border-sec)"}`,transition:"all 0.2s"}}>
+                <div style={{fontSize:28,marginBottom:4}}>{l}</div>
+                <div style={{fontSize:12,fontWeight:dark===k?600:400}}>{label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div style={{padding:"12px 20px 8px",display:"flex",gap:10,flexShrink:0,maxWidth:440,margin:"0 auto",width:"100%",boxSizing:"border-box"}}>
+        {step > 0 && (
+          <button onClick={()=>setStep(s=>s-1)} style={{padding:"13px 20px",borderRadius:12,border:"0.5px solid var(--border-sec)",
+            background:"var(--bg-card)",color:"var(--text-sec)",cursor:"pointer",fontSize:13,fontWeight:500}}>
+            {uiO.indietro||"←"}
+          </button>
+        )}
+        <button onClick={()=>{ if(step===total-1){finish();}else setStep(s=>s+1); }}
+          style={{flex:1,padding:"13px",borderRadius:12,background:"var(--accent)",color:"white",
+            border:"none",cursor:"pointer",fontSize:15,fontWeight:700}}>
+          {step===total-1 ? (uiO.fine||"Inizia →") : (uiO.avanti||"Avanti →")}
+        </button>
+      </div>
+
+      {/* Dots */}
+      <div style={{display:"flex",justifyContent:"center",gap:5,padding:"10px 0 20px",flexShrink:0}}>
+        {ONBOARDING_STEPS.map((_,i)=>(
+          <div key={i} onClick={()=>setStep(i)} style={{height:6,borderRadius:3,cursor:"pointer",
+            width:i===step?22:6,
+            background:i===step?"var(--accent)":i<step?"var(--accent-44)":"var(--border)",
+            transition:"all 0.3s"}}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Impostazioni ──────────────────────────────────────────────────────────────
-function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, syncMsg, signInEmail, createAccount, signOutUser, signInAnon, signInWithGoogle, sendPasswordReset, updateUserEmail, events, promemoria }) {
+function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDeleted, setRoutineDeleted, habitCfg, setHabitCfg, habitDeleted, setHabitDeleted, todoDeleted, setTodoDeleted, defaultSection="generali", authUser, syncStatus, syncMsg, signInEmail, createAccount, signOutUser, signInAnon, signInWithGoogle, sendPasswordReset, updateUserEmail, events, promemoria, onOpenTour }) {
   const dark = cfg.darkMode || false;
   const [section, setSection] = useState(defaultSection);
   const [authMode, setAuthMode] = useState("login"); // login | register
@@ -2313,6 +2604,19 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           <Toggle label="🌙 Tema scuro" on={cfg.darkMode||false} onChange={v=>setCfg(c=>({...c,darkMode:v}))}/>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Selezione lingua */}
+          <div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>🌐 Lingua — Language — Idioma</div>
+            <div style={{display:"flex",gap:8}}>
+              {[{k:"it",l:"🇮🇹 Italiano"},{k:"en",l:"🇬🇧 English"},{k:"es",l:"🇪🇸 Español"}].map(({k,l})=>{
+                const active = i18n.language === k || i18n.language.startsWith(k);
+                return (
+                  <div key={k} onClick={()=>i18n.changeLanguage(k)} style={{flex:1,padding:"8px 4px",borderRadius:8,cursor:"pointer",textAlign:"center",background:active?"var(--accent)":dark?"var(--bg-gray)":"var(--bg-wash)",color:active?"white":"var(--text-sec)",border:`1px solid ${active?"var(--accent)":"var(--border-sec)"}`,fontSize:11,fontWeight:active?600:400,transition:"all 0.15s"}}>{l}</div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           {/* Unità di misura */}
           <div>
             <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Unità di misura</div>
@@ -2337,6 +2641,13 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
               </div>
             </div>
           </div>
+          <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
+          {/* Tour dell'app */}
+          <button onClick={onOpenTour} style={{width:"100%",padding:"11px",borderRadius:10,
+            background:dark?"var(--bg-sec)":"var(--bg-wash)",color:"var(--text-sec)",
+            border:"0.5px solid var(--border-sec)",cursor:"pointer",fontSize:13,fontWeight:500,textAlign:"center"}}>
+            🗺️ Tour dell'app
+          </button>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           {/* Posizione */}
           <div>
@@ -3017,6 +3328,7 @@ export default function App() {
   const [ekModal, setEkModal] = useState(false);
   const [moonBodyModal, setMoonBodyModal] = useState(false);
   const [agriModal, setAgriModal] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [moonTap, setMoonTap] = useState(false);
   const [annoModal, setAnnoModal] = useState(false);
   const [impTab, setImpTab] = useState("generali");
@@ -3046,6 +3358,12 @@ export default function App() {
   const [todoLists, setTodoLists]   = useLS("bazi_todo_lists",   []);
   const [todoDeleted, setTodoDeleted]       = useLS("bazi_todo_del",    []);
   const [promemoria, setPromemoria] = useLS("bazi_promemoria",   {});
+
+  // i18n — locale data loaded from JSON; language stored in localStorage bazi_lang
+  const { i18n: i18nInst } = useTranslation();
+  const L = i18n.getDataByLanguage(i18nInst.language)?.translation
+         || i18n.getDataByLanguage('it')?.translation
+         || {};
 
   const dark = cfg.darkMode || false;
   const accent = cfg.followDayElement
@@ -3345,6 +3663,7 @@ export default function App() {
   const rows=[]; for(let i=0;i<cells.length;i+=7)rows.push(cells.slice(i,i+7));
 
   return (
+    <LC.Provider value={L}>
     <div className={dark?"dark":""} style={{fontFamily:"var(--font-sans)",minHeight:"100svh",background:"var(--bg)",color:"var(--text)"}}>
       <TopNav view={view} setView={setView} syncStatus={syncStatus} userEmail={authUser?.email} setImpTab={setImpTab} dark={dark}/>
 
@@ -3357,9 +3676,9 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               <div onClick={()=>setAnnoModal(true)} style={{cursor:"pointer",userSelect:"none",flex:1,minWidth:0}}>
                 <div style={{fontSize:18,fontWeight:500,color:"var(--text)",letterSpacing:"0.5px"}}>{TRONCHI[byYear.tronco]}{RAMI[byYear.ramo]} · {anno}</div>
-                <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {ANIMALI[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
+                <div style={{fontSize:11,color:"var(--text-sec)"}}>{ANIMALI_EMOJI[byYear.ramo]} {(L.animali||ANIMALI)[byYear.ramo]} · {ELEMENTI[TRONCO_EL[byYear.tronco]].char} {ELEMENTI[TRONCO_EL[byYear.tronco]].nome}</div>
               </div>
-              <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>Oggi</button>
+              <button onClick={goOggi} style={{fontSize:12,padding:"7px 14px",background:"var(--accent)",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>{L.ui?.oggi||"Oggi"}</button>
             </div>
             {/* Row 2: Luna widget + Agricoltura widget */}
             {(()=>{
@@ -3378,7 +3697,7 @@ export default function App() {
                     <div style={{minWidth:0}}>
                       <div style={{display:"flex",alignItems:"baseline",gap:4}}>
                         <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{illum}%</span>
-                        <span style={{fontSize:10,color:"var(--text-sec)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{todayPhaseStr}</span>
+                        <span style={{fontSize:10,color:"var(--text-sec)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{moonDisplayName(todayPhaseStr)}</span>
                       </div>
                       {todayMt && <div style={{fontSize:10,color:"var(--text-ter)",letterSpacing:"0.3px",marginTop:1}}>↑{todayMt.rise} ↓{todayMt.set}</div>}
                     </div>
@@ -3387,8 +3706,8 @@ export default function App() {
                   <div onClick={()=>setAgriModal(true)} style={{cursor:"pointer",padding:"8px 12px",borderRadius:10,background:dark?"#0d1a0d":"#f0faf3",border:"0.5px solid #4a7c5944",display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:22,lineHeight:1,flexShrink:0}}>{agriData.cover}</span>
                     <div style={{minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,color:dark?"#81c784":"#4a7c59",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Stagione</div>
-                      <div style={{fontSize:10,color:"var(--text-sec)",marginTop:1}}>{LUNA_ZODIACO_AGRI[todayZod].icon} {LUNA_ZODIACO_AGRI[todayZod].tipo}</div>
+                      <div style={{fontSize:12,fontWeight:600,color:dark?"#81c784":"#4a7c59",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{i18n.t('ui.agricoltura.titolo',{defaultValue:"Stagione"})}</div>
+                      <div style={{fontSize:10,color:"var(--text-sec)",marginTop:1}}>{LUNA_ZODIACO_AGRI[todayZod].icon} {(L.lunaZodiacoAgri?.[todayZod]||LUNA_ZODIACO_AGRI[todayZod]).tipo}</div>
                     </div>
                   </div>
                 </div>
@@ -3400,14 +3719,14 @@ export default function App() {
               <button onClick={prevMese} style={{padding:"5px 14px",fontSize:16}}>←</button>
               <div style={{textAlign:"center",cursor:"pointer"}} onClick={()=>setMeseModal(true)}>
                 <div style={{fontWeight:600,fontSize:16,color:"var(--text)",textDecoration:"underline",textDecorationStyle:"dotted",textDecorationColor:"var(--border-sec)"}}>{mese.nome} Mese</div>
-                <div style={{fontSize:12,color:"var(--text-sec)"}}>{ELEMENTI[mese.elemento].char} {ELEMENTI[mese.elemento].nome} · {ANIMALI_EMOJI[baziMonth(meseIdx,byYear.tronco).ramo]} {ANIMALI[baziMonth(meseIdx,byYear.tronco).ramo]}</div>
+                <div style={{fontSize:12,color:"var(--text-sec)"}}>{ELEMENTI[mese.elemento].char} {ELEMENTI[mese.elemento].nome} · {ANIMALI_EMOJI[baziMonth(meseIdx,byYear.tronco).ramo]} {(L.animali||ANIMALI)[baziMonth(meseIdx,byYear.tronco).ramo]}</div>
               </div>
               <button onClick={nextMese} style={{padding:"5px 14px",fontSize:16}}>→</button>
             </div>
 
             {/* Header giorni */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:3}}>
-              {["Dom","Lun","Mar","Mer","Gio","Ven","Sab"].map(g=>(
+              {(i18n.language.startsWith("en") ? ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"] : i18n.language.startsWith("es") ? ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"] : ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]).map(g=>(
                 <div key={g} style={{textAlign:"center",fontSize:11,color:"var(--text-sub)",padding:"2px 0"}}>{g}</div>
               ))}
             </div>
@@ -3473,7 +3792,7 @@ export default function App() {
                             ? <div style={{fontSize:showT?14:20,lineHeight:1.2}}>{ANIMALI_EMOJI[bazi.ramo]}</div>
                             : rMode==="chars"
                               ? <div style={{fontSize:showT?14:18,lineHeight:1.2,color:txtColor,fontWeight:600}}>{RAMI[bazi.ramo]}</div>
-                              : <div style={{fontSize:showT?7:9,lineHeight:1.3,color:txtColor,opacity:0.85}}>{ANIMALI[bazi.ramo]}</div>);
+                              : <div style={{fontSize:showT?7:9,lineHeight:1.3,color:txtColor,opacity:0.85}}>{(L.animali||ANIMALI)[bazi.ramo]}</div>);
                           const troncoEl = showT&&(tMode==="chars"
                             ? <div style={{fontSize:showR?15:18,lineHeight:1.15,color:txtColor,fontWeight:500}}>{TRONCHI[bazi.tronco]}</div>
                             : tMode==="emoji"
@@ -3499,7 +3818,7 @@ export default function App() {
             {/* Pannello giorno selezionato */}
             {selDay && (()=>{
               const p=moonPhase(selDay.date), ph=moonName(p), zod=lunaZodiac(selDay.date);
-              const bz=BELLEZZA[ph]||{}, ek=isEkadashi(selDay.date);
+              const bz=(L.bellezza||BELLEZZA)[ph]||{}, ek=isEkadashi(selDay.date);
               const el=TRONCO_EL[selDay.bazi.tronco], elR=RAMO_EL[selDay.bazi.ramo];
               const dayRoutineLog=routineLog[selDay.date.toDateString()]||{};
               const activeTasks=routineCfg.filter(t=>t.attiva);
@@ -3542,7 +3861,7 @@ export default function App() {
                         <div onClick={()=>setMoonTap(s=>!s)} style={{background:dark?"#1a1a20":"#f8f8f6",borderRadius:8,padding:"8px 6px",textAlign:"center",border:`0.5px solid ${moonTap?"var(--accent)":"var(--border-sec)"}`,cursor:"pointer",transition:"border-color 0.15s"}}>
                           <div style={{fontSize:11,color:"var(--text-sec)",marginBottom:3}}>Luna</div>
                           <div style={{fontSize:22}}>{moonEmoji(p)}</div>
-                          <div style={{fontSize:11,fontWeight:600,marginTop:2,color:"var(--text)"}}>{ph}</div>
+                          <div style={{fontSize:11,fontWeight:600,marginTop:2,color:"var(--text)"}}>{moonDisplayName(ph)}</div>
                           {cfg.showLunaZod && <div style={{fontSize:10,color:"var(--text-sec)",marginTop:1}}>{ZODIAC_SYM[zod]} {ZODIAC_NOMI[zod]}</div>}
                           {mt && <div style={{fontSize:9,color:"var(--text-sub)",marginTop:3,lineHeight:1.5}}>↑{mt.rise} ↓{mt.set}</div>}
                           <div style={{fontSize:8,color:"var(--text-sub)",marginTop:2}}>{moonTap?"▲ chiudi":"▼ consigli"}</div>
@@ -3600,8 +3919,8 @@ export default function App() {
                   {/* Consigli bellezza — visibile solo dopo tap Luna */}
                   {moonTap && bz.capelli && (
                     <div style={{marginBottom:10,padding:"10px 12px",background:dark?"var(--bg-card)":"#fafaf8",borderRadius:8,border:"0.5px solid var(--border-sec)"}}>
-                      <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:"var(--text)"}}>✨ Consigli luna per oggi</div>
-                      {[["💆 Pelle",bz.pelle],["💇 Capelli",bz.capelli],["💅 Unghie",bz.unghie],["🧘 Corpo",bz.corpo]].map(([k,v])=>(
+                      <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:"var(--text)"}}>✨ {i18n.t('ui.luna.bellezzaTitolo',{defaultValue:"Consigli luna per oggi"})}</div>
+                      {[[`💆 ${i18n.t('ui.luna.pelle',{defaultValue:"Pelle"})}`,bz.pelle],[`💇 ${i18n.t('ui.luna.capelli',{defaultValue:"Capelli"})}`,bz.capelli],[`💅 ${i18n.t('ui.luna.unghie',{defaultValue:"Unghie"})}`,bz.unghie],[`🧘 ${i18n.t('ui.luna.corpo2',{defaultValue:"Corpo"})}`,bz.corpo]].map(([k,v])=>(
                         <div key={k} style={{marginBottom:4}}>
                           <span style={{fontSize:11,fontWeight:600,color:"var(--text-sec)"}}>{k}: </span>
                           <span style={{fontSize:11,color:"var(--text)"}}>{v}</span>
@@ -3647,7 +3966,7 @@ export default function App() {
           </div>
         )}
         {view==="bazi"         && <BaziView dark={dark} baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}/>}
-        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} syncMsg={syncMsg} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} signInWithGoogle={signInWithGoogle} sendPasswordReset={sendPasswordReset} updateUserEmail={updateUserEmail} events={events} promemoria={promemoria}/>}
+        {view==="impostazioni" && <ImpostazioniView cfg={cfg} setCfg={setCfg} routineCfg={routineCfg} setRoutineCfg={setRoutineCfg} routineDeleted={routineDeleted} setRoutineDeleted={setRoutineDeleted} habitCfg={habitCfg} setHabitCfg={setHabitCfg} habitDeleted={habitDeleted} setHabitDeleted={setHabitDeleted} todoDeleted={todoDeleted} setTodoDeleted={setTodoDeleted} defaultSection={impTab} authUser={authUser} syncStatus={syncStatus} syncMsg={syncMsg} signInEmail={signInEmail} createAccount={createAccount} signOutUser={signOutUser} signInAnon={signInAnon} signInWithGoogle={signInWithGoogle} sendPasswordReset={sendPasswordReset} updateUserEmail={updateUserEmail} events={events} promemoria={promemoria} onOpenTour={()=>{setOnboardingOpen(true);}}/>}
       </div>
 
       {/* Conflict resolution modal */}
@@ -3735,6 +4054,17 @@ export default function App() {
       {ekModal      && <EkadashiModal onClose={()=>setEkModal(false)} dark={dark}/>}
       {moonBodyModal && <MoonBodyModal currentPhase={moonName(moonPhase(oggi))} currentZodiac={lunaZodiac(oggi)} onClose={()=>setMoonBodyModal(false)} dark={dark}/>}
       {agriModal && <AgricolturaModal meseGrego={mese.start.getMonth()} moonPhaseStr={moonName(moonPhase(oggi))} zodiacIdx={lunaZodiac(oggi)} onClose={()=>setAgriModal(false)} dark={dark}/>}
+
+      {/* Onboarding — primo avvio o da impostazioni */}
+      {(!cfg.onboardingDone || onboardingOpen) && (
+        <OnboardingModal
+          cfg={cfg} setCfg={setCfg}
+          baziPersonal={baziPersonal} setBaziPersonal={setBaziPersonal}
+          onClose={()=>setOnboardingOpen(false)}
+          dark={dark}
+        />
+      )}
     </div>
+    </LC.Provider>
   );
 }

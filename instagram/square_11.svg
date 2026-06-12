@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%"   stop-color="#060610"/>
+      <stop offset="60%"  stop-color="#08081a"/>
+      <stop offset="100%" stop-color="#060612"/>
+    </linearGradient>
+    <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#fff8e8"/>
+      <stop offset="40%"  stop-color="#ffeebb" stop-opacity="0.85"/>
+      <stop offset="75%"  stop-color="#e8c870" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#a07820" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#4a7c59" stop-opacity="0"/>
+      <stop offset="60%"  stop-color="#4a7c59" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#2a5c39" stop-opacity="0.2"/>
+    </radialGradient>
+    <radialGradient id="moonBodyGrad" cx="40%" cy="38%" r="65%">
+      <stop offset="0%"   stop-color="#fffde8"/>
+      <stop offset="100%" stop-color="#e8c850"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#4a7c59" stop-opacity="0"/>
+      <stop offset="30%"  stop-color="#4a7c59"/>
+      <stop offset="70%"  stop-color="#4a7c59"/>
+      <stop offset="100%" stop-color="#4a7c59" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#e8c860" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#e8c860" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#e8c860" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ── Background ── -->
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- ── Starfield ── -->
+  <g opacity="0.65" fill="#ffffff">
+    <circle cx="80"   cy="90"  r="1.2"/><circle cx="210" cy="55"  r="0.8"/>
+    <circle cx="350"  cy="130" r="1.5"/><circle cx="490" cy="40"  r="0.9"/>
+    <circle cx="650"  cy="85"  r="1.1"/><circle cx="790" cy="140" r="0.7"/>
+    <circle cx="920"  cy="68"  r="1.3"/><circle cx="1010" cy="115" r="0.9"/>
+    <circle cx="45"   cy="300" r="0.8"/><circle cx="1040" cy="280" r="1.1"/>
+    <circle cx="140"  cy="500" r="0.9"/><circle cx="960"  cy="480" r="0.8"/>
+    <circle cx="60"   cy="700" r="1.0"/><circle cx="1030" cy="680" r="0.7"/>
+    <circle cx="180"  cy="900" r="0.8"/><circle cx="920"  cy="880" r="1.1"/>
+    <circle cx="300"  cy="1020" r="0.7"/><circle cx="780" cy="1000" r="0.9"/>
+  </g>
+
+  <!-- ── Faint bg chars (left) ── -->
+  <g font-family="Georgia, serif">
+    <text x="-30" y="220" font-size="200" fill="#e8c860" opacity="0.04" transform="rotate(-15 -30 220)">月</text>
+    <text x="820"  y="380" font-size="180" fill="#4a7c59"  opacity="0.05" transform="rotate(10 820 380)">木</text>
+    <text x="-20" y="620"  font-size="160" fill="#e8c860"  opacity="0.04" transform="rotate(-8 -20 620)">水</text>
+    <text x="860"  y="820" font-size="170" fill="#4a7c59"  opacity="0.04" transform="rotate(12 860 820)">火</text>
+  </g>
+
+  <!-- ── Left: Moon ── -->
+  <ellipse cx="290" cy="400" rx="260" ry="260" fill="url(#halo)"/>
+  <circle  cx="290" cy="400" r="200"  fill="none" stroke="#e8c860" stroke-width="1" opacity="0.1"/>
+  <circle  cx="290" cy="400" r="155"  fill="url(#moonBodyGrad)" filter="url(#glow)" opacity="0.95"/>
+  <!-- Crater details -->
+  <circle cx="255" cy="370" r="22"  fill="#d4b840" opacity="0.14"/>
+  <circle cx="325" cy="440" r="16"  fill="#d4b840" opacity="0.10"/>
+  <circle cx="280" cy="460" r="11"  fill="#d4b840" opacity="0.11"/>
+  <circle cx="355" cy="360" r="14"  fill="#d4b840" opacity="0.09"/>
+
+  <!-- ── Right: text block ── -->
+  <g transform="translate(570 240)">
+    <!-- Taijitu -->
+    <g transform="translate(195 0)">
+      <circle cx="0" cy="0" r="48" fill="#0d0d20"/>
+      <path d="M0,-48 A48,48 0 0,0 0,48 A24,24 0 0,1 0,0 A24,24 0 0,0 0,-48 Z" fill="#fffde8"/>
+      <circle cx="0" cy="-24" r="12" fill="#0d0d20"/>
+      <circle cx="0" cy="24"  r="12" fill="#fffde8"/>
+      <circle cx="0" cy="0"   r="48" fill="none" stroke="#e8c860" stroke-width="1.5" opacity="0.6"/>
+      <circle cx="34" cy="-34" r="7" fill="#4a7c59"/>
+    </g>
+
+    <text y="90" font-family="Georgia, 'Times New Roman', serif" font-size="100" font-weight="700"
+      fill="#fffde8" letter-spacing="3" filter="url(#softGlow)">Ba-Zi</text>
+    <text y="145" font-family="Georgia, serif" font-size="30" fill="#e8c860" letter-spacing="7" opacity="0.9">CALENDARIO LUNARE</text>
+    <rect x="0" y="165" width="440" height="2" fill="url(#lineGrad)" rx="1"/>
+    <text y="215" font-family="Georgia, serif" font-size="26" fill="#a0b8a8" font-style="italic" letter-spacing="1">
+      Il tuo compagno cosmico quotidiano
+    </text>
+  </g>
+
+  <!-- ── Horizontal separator ── -->
+  <rect x="0" y="590" width="1080" height="1" fill="url(#goldLine)"/>
+
+  <!-- ── Moon phases strip ── -->
+  <g transform="translate(540 655)" text-anchor="middle">
+    <g transform="translate(-400 0)">
+      <circle cx="0" cy="0" r="28" fill="#fffde8" opacity="0.14"/>
+      <circle cx="14" cy="0" r="28" fill="#08081a"/>
+      <circle cx="0" cy="0" r="28" fill="none" stroke="#e8c860" stroke-width="1.5" opacity="0.35"/>
+    </g>
+    <g transform="translate(-133 0)">
+      <circle cx="0" cy="0" r="28" fill="#fffde8" opacity="0.18"/>
+      <rect x="0" y="-28" width="28" height="56" fill="#08081a"/>
+      <circle cx="0" cy="0" r="28" fill="none" stroke="#e8c860" stroke-width="1.5" opacity="0.35"/>
+    </g>
+    <circle cx="0" cy="0" r="28" fill="#1a1a2a" stroke="#e8c860" stroke-width="1.5" stroke-opacity="0.35"/>
+    <g transform="translate(133 0)">
+      <circle cx="0" cy="0" r="28" fill="#1a1a2a"/>
+      <path d="M0,-28 A28,28 0 0,1 0,28 Z" fill="#fffde8" opacity="0.85"/>
+      <circle cx="0" cy="0" r="28" fill="none" stroke="#e8c860" stroke-width="1.5" opacity="0.35"/>
+    </g>
+    <circle cx="400" cy="0" r="28" fill="#fffde8" opacity="0.88" filter="url(#softGlow)"/>
+    <text y="62" font-family="Georgia, serif" font-size="22" fill="#e8c860" opacity="0.5" letter-spacing="60">🌘 🌗 🌑 🌓 🌕</text>
+  </g>
+
+  <!-- ── 4 feature chips ── -->
+  <g transform="translate(60 750)">
+    <!-- Row 1 -->
+    <rect x="0"   y="0" width="225" height="68" rx="34" fill="url(#cardBg)" stroke="#4a7c59" stroke-opacity="0.35" stroke-width="1"/>
+    <text x="113" y="28" text-anchor="middle" font-family="system-ui" font-size="22">🌙</text>
+    <text x="113" y="54" text-anchor="middle" font-family="Georgia,serif" font-size="19" fill="#c8d8c8">Fasi Lunari</text>
+
+    <rect x="245"  y="0" width="225" height="68" rx="34" fill="url(#cardBg)" stroke="#8b6914" stroke-opacity="0.4" stroke-width="1"/>
+    <text x="358"  y="28" text-anchor="middle" font-family="system-ui" font-size="22">☯️</text>
+    <text x="358"  y="54" text-anchor="middle" font-family="Georgia,serif" font-size="19" fill="#c8d8c8">Ba-Zi</text>
+
+    <rect x="490"  y="0" width="225" height="68" rx="34" fill="url(#cardBg)" stroke="#1a5276" stroke-opacity="0.4" stroke-width="1"/>
+    <text x="603"  y="28" text-anchor="middle" font-family="system-ui" font-size="22">🌱</text>
+    <text x="603"  y="54" text-anchor="middle" font-family="Georgia,serif" font-size="19" fill="#c8d8c8">Agricoltura</text>
+
+    <rect x="735"  y="0" width="225" height="68" rx="34" fill="url(#cardBg)" stroke="#b5451b" stroke-opacity="0.3" stroke-width="1"/>
+    <text x="848"  y="28" text-anchor="middle" font-family="system-ui" font-size="22">🛠️</text>
+    <text x="848"  y="54" text-anchor="middle" font-family="Georgia,serif" font-size="19" fill="#c8d8c8">Routine</text>
+  </g>
+
+  <!-- ── Chinese chars row ── -->
+  <text x="540" y="900" text-anchor="middle" font-family="Georgia,serif" font-size="32"
+    fill="#e8c860" opacity="0.55" letter-spacing="18">甲  乙  丙  丁  戊  己  庚  辛  壬  癸</text>
+
+  <!-- ── Platforms + languages ── -->
+  <g transform="translate(540 960)" text-anchor="middle">
+    <text font-family="Georgia,serif" font-size="26" fill="#808080" letter-spacing="3">🇮🇹 · 🇬🇧 · 🇪🇸 · iOS · Android · PWA · Gratuita</text>
+  </g>
+
+  <!-- ── Bottom CTA ── -->
+  <g transform="translate(540 1030)" text-anchor="middle">
+    <rect x="-200" y="-34" width="400" height="60" rx="30" fill="#4a7c59" opacity="0.9"/>
+    <text font-family="Georgia,serif" font-size="26" font-weight="700" fill="#ffffff" letter-spacing="2">✦ Scopri l'app ✦</text>
+  </g>
+</svg>
