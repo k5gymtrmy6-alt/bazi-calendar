@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+    <stop offset="0%" stop-color="#07070f"/>
+    <stop offset="100%" stop-color="#0a0a14"/>
+  </linearGradient>
+  <radialGradient id="logoHalo" cx="50%" cy="50%" r="50%">
+    <stop offset="0%"   stop-color="#4a7c59" stop-opacity="0.18"/>
+    <stop offset="100%" stop-color="#4a7c59" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="moonHalo" cx="50%" cy="50%" r="50%">
+    <stop offset="0%"   stop-color="#e8c860" stop-opacity="0.06"/>
+    <stop offset="100%" stop-color="#e8c860" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="softGlow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <linearGradient id="greenLine" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#4a7c59" stop-opacity="0"/>
+    <stop offset="35%"  stop-color="#4a7c59"/>
+    <stop offset="65%"  stop-color="#4a7c59"/>
+    <stop offset="100%" stop-color="#4a7c59" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#e8c860" stop-opacity="0"/>
+    <stop offset="50%"  stop-color="#e8c860" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="#e8c860" stop-opacity="0"/>
+  </linearGradient>
+  <!-- The official logo (dark version), centered at origin, total radius ~80px -->
+  <symbol id="logo" viewBox="-80 -80 160 160">
+    <polygon points="0,-66 47,-47 66,0 47,47 0,66 -47,47 -66,0 -47,-47" fill="none" stroke="#4a7c59" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="46" fill="none" stroke="#3d3d3d" stroke-width="0.8"/>
+    <circle cx="0" cy="0" r="30" fill="#3d3d3d" opacity="0.9"/>
+    <path d="M0,-30 A30,30 0 0,1 0,30 A15,15 0 0,1 0,0 A15,15 0 0,0 0,-30 Z" fill="#f0ede8" opacity="0.80"/>
+    <path d="M0,-30 A30,30 0 0,0 0,30 A15,15 0 0,0 0,0 A15,15 0 0,1 0,-30 Z" fill="#2C3E2D" opacity="0.85"/>
+    <circle cx="0" cy="-15" r="6" fill="#f0ede8" opacity="0.80"/>
+    <circle cx="0" cy="15"  r="6" fill="#1a1a1a" opacity="0.85"/>
+    <circle cx="0" cy="0"   r="30" fill="none" stroke="#5a5a5a" stroke-width="0.8"/>
+    <path d="M0,-30 A15,15 0 0,1 0,0 A15,15 0 0,0 0,30" fill="none" stroke="#5a5a5a" stroke-width="0.8"/>
+    <circle cx="40" cy="-40" r="5" fill="#4a7c59"/>
+  </symbol>
+</defs>
+
+<!-- Background -->
+<rect width="1080" height="1080" fill="url(#bg)"/>
+
+<!-- Stars -->
+<g fill="#fff" opacity="0.55">
+  <circle cx="90"  cy="80"  r="1.2"/><circle cx="220" cy="50"  r="0.8"/><circle cx="360" cy="120" r="1.1"/>
+  <circle cx="700" cy="70"  r="1.3"/><circle cx="850" cy="110" r="0.7"/><circle cx="980" cy="55"  r="1.0"/>
+  <circle cx="55"  cy="320" r="0.9"/><circle cx="1020" cy="290" r="1.1"/><circle cx="60"  cy="700" r="0.8"/>
+  <circle cx="1030" cy="680" r="0.9"/><circle cx="130" cy="940" r="1.1"/><circle cx="950" cy="960" r="0.7"/>
+</g>
+
+<!-- Faint bg chars -->
+<g font-family="Georgia,serif" opacity="0.04">
+  <text x="20"  y="300" font-size="220" fill="#e8c860" transform="rotate(-12 20 300)">月</text>
+  <text x="780" y="420" font-size="190" fill="#4a7c59" transform="rotate(9 780 420)">木</text>
+  <text x="30"  y="780" font-size="180" fill="#e8c860" transform="rotate(-7 30 780)">水</text>
+  <text x="800" y="950" font-size="170" fill="#4a7c59" transform="rotate(11 800 950)">火</text>
+</g>
+
+<!-- ── LEFT: Logo section ── -->
+<!-- Halo -->
+<ellipse cx="310" cy="480" rx="260" ry="260" fill="url(#logoHalo)"/>
+<!-- Logo large, centered at (310, 480) -->
+<use href="#logo" x="160" y="330" width="300" height="300"/>
+
+<!-- App name below logo -->
+<text x="310" y="660" text-anchor="middle" font-family="Georgia,'Times New Roman',serif"
+  font-size="34" font-weight="700" fill="#f0ede8" letter-spacing="3" filter="url(#softGlow)">Ba-Zi</text>
+<text x="310" y="694" text-anchor="middle" font-family="Georgia,serif"
+  font-size="17" fill="#e8c860" letter-spacing="6" opacity="0.85">CALENDARIO LUNARE</text>
+<text x="310" y="718" text-anchor="middle" font-family="Georgia,serif"
+  font-size="14" fill="#4a7c59" letter-spacing="4" opacity="0.8">八字</text>
+
+<!-- Vertical divider -->
+<rect x="590" y="80" width="1" height="920" fill="url(#greenLine)" opacity="0.4"/>
+
+<!-- ── RIGHT: Content section ── -->
+<g transform="translate(628 0)">
+  <!-- Tagline -->
+  <text x="0" y="145" font-family="Georgia,serif" font-size="20" fill="#9a9690" letter-spacing="1" font-style="italic">La tua guida per la</text>
+  <text x="0" y="170" font-family="Georgia,serif" font-size="20" fill="#9a9690" letter-spacing="1" font-style="italic">crescita personale</text>
+
+  <!-- Main title -->
+  <text x="0" y="240" font-family="Georgia,'Times New Roman',serif" font-size="62"
+    font-weight="700" fill="#f0ede8" letter-spacing="1" filter="url(#softGlow)">Ba-Zi</text>
+  <text x="0" y="284" font-family="Georgia,serif" font-size="26" fill="#e8c860" letter-spacing="5" opacity="0.9">CALENDARIO LUNARE</text>
+
+  <!-- Green rule -->
+  <rect x="0" y="305" width="400" height="2" rx="1" fill="#4a7c59" opacity="0.6"/>
+
+  <!-- Features list -->
+  <g font-family="Georgia,serif">
+    <text x="0" y="358" font-size="22" fill="#4a7c59">●</text>
+    <text x="28" y="358" font-size="22" font-weight="600" fill="#f0ede8">Quattro Pilastri Ba-Zi</text>
+    <text x="28" y="380" font-size="17" fill="#9a9690">Scopri la tua natura elementale</text>
+
+    <text x="0" y="426" font-size="22" fill="#4a7c59">●</text>
+    <text x="28" y="426" font-size="22" font-weight="600" fill="#f0ede8">Energia del Giorno</text>
+    <text x="28" y="448" font-size="17" fill="#9a9690">Sincronizzati con l'elemento del giorno</text>
+
+    <text x="0" y="494" font-size="22" fill="#4a7c59">●</text>
+    <text x="28" y="494" font-size="22" font-weight="600" fill="#f0ede8">Luna &amp; Corpo</text>
+    <text x="28" y="516" font-size="17" fill="#9a9690">Consigli per corpo, bellezza e agricoltura</text>
+
+    <text x="0" y="562" font-size="22" fill="#4a7c59">●</text>
+    <text x="28" y="562" font-size="22" font-weight="600" fill="#f0ede8">Morning Routine</text>
+    <text x="28" y="584" font-size="17" fill="#9a9690">Costruisci abitudini che durano</text>
+
+    <text x="0" y="630" font-size="22" fill="#4a7c59">●</text>
+    <text x="28" y="630" font-size="22" font-weight="600" fill="#f0ede8">Agricoltura Biodinamica</text>
+    <text x="28" y="652" font-size="17" fill="#9a9690">Sistema Maria Thun · 12 mesi</text>
+  </g>
+
+  <!-- Gold rule -->
+  <rect x="0" y="686" width="400" height="1" fill="url(#goldLine)"/>
+
+  <!-- 5 elements mini pills -->
+  <g transform="translate(0 706)">
+    <rect x="0"   y="0" width="70" height="30" rx="15" fill="#4a7c5922" stroke="#4a7c59" stroke-width="1"/>
+    <text x="35"  y="20" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#4a7c59">木 Legno</text>
+    <rect x="78"  y="0" width="64" height="30" rx="15" fill="#b5451b22" stroke="#b5451b" stroke-width="1"/>
+    <text x="110" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#b5451b">火 Fuoco</text>
+    <rect x="150" y="0" width="60" height="30" rx="15" fill="#8b691422" stroke="#8b6914" stroke-width="1"/>
+    <text x="180" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#8b6914">土 Terra</text>
+    <rect x="218" y="0" width="66" height="30" rx="15" fill="#6b728022" stroke="#6b7280" stroke-width="1"/>
+    <text x="251" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#6b7280">金 Metallo</text>
+    <rect x="292" y="0" width="66" height="30" rx="15" fill="#1a527622" stroke="#1a5276" stroke-width="1"/>
+    <text x="325" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#1a5276">水 Acqua</text>
+  </g>
+
+  <!-- Platform + languages -->
+  <text x="0" y="790" font-family="Georgia,serif" font-size="16" fill="#555" letter-spacing="2">🇮🇹 · 🇬🇧 · 🇪🇸 · PWA · iOS · Android · Gratuita</text>
+
+  <!-- CTA -->
+  <rect x="0" y="820" width="320" height="58" rx="29" fill="#4a7c59" opacity="0.92"/>
+  <text x="160" y="855" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-weight="700" fill="#fff" letter-spacing="2">✦ Scopri l'app ✦</text>
+</g>
+
+<!-- Bottom chars strip -->
+<text x="540" y="1040" text-anchor="middle" font-family="Georgia,serif" font-size="26"
+  fill="#e8c860" opacity="0.3" letter-spacing="20">甲 乙 丙 丁 戊 己 庚 辛 壬 癸</text>
+</svg>

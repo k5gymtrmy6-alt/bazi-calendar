@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0%" stop-color="#07070f"/><stop offset="100%" stop-color="#0a0a14"/></linearGradient>
+  <linearGradient id="gl" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4a7c59" stop-opacity="0"/><stop offset="35%" stop-color="#4a7c59"/><stop offset="65%" stop-color="#4a7c59"/><stop offset="100%" stop-color="#4a7c59" stop-opacity="0"/></linearGradient>
+  <filter id="sg"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <symbol id="logo-mini" viewBox="-80 -80 160 160">
+    <polygon points="0,-66 47,-47 66,0 47,47 0,66 -47,47 -66,0 -47,-47" fill="none" stroke="#4a7c59" stroke-width="2"/>
+    <circle cx="0" cy="0" r="30" fill="#3d3d3d" opacity="0.9"/>
+    <path d="M0,-30 A30,30 0 0,1 0,30 A15,15 0 0,1 0,0 A15,15 0 0,0 0,-30 Z" fill="#f0ede8" opacity="0.80"/>
+    <path d="M0,-30 A30,30 0 0,0 0,30 A15,15 0 0,0 0,0 A15,15 0 0,1 0,-30 Z" fill="#2C3E2D" opacity="0.85"/>
+    <circle cx="0" cy="-15" r="6" fill="#f0ede8" opacity="0.80"/>
+    <circle cx="0" cy="15"  r="6" fill="#1a1a1a" opacity="0.85"/>
+    <circle cx="0" cy="0"   r="30" fill="none" stroke="#5a5a5a" stroke-width="0.8"/>
+    <circle cx="40" cy="-40" r="5" fill="#4a7c59"/>
+  </symbol>
+</defs>
+
+<rect width="1080" height="1080" fill="url(#bg)"/>
+<g fill="#fff" opacity="0.45"><circle cx="80" cy="80" r="1.1"/><circle cx="900" cy="60" r="0.9"/><circle cx="55" cy="600" r="0.8"/><circle cx="1030" cy="580" r="1.0"/><circle cx="150" cy="980" r="0.9"/></g>
+<g font-family="Georgia,serif" opacity="0.04">
+  <text x="800" y="450" font-size="200" fill="#e8c860" transform="rotate(10 800 450)">天</text>
+  <text x="30"  y="800" font-size="190" fill="#4a7c59" transform="rotate(-9 30 800)">干</text>
+</g>
+
+<!-- Header -->
+<use href="#logo-mini" x="60" y="55" width="80" height="80"/>
+<text x="155" y="95" font-family="Georgia,serif" font-size="20" fill="#4a7c59" letter-spacing="2">Ba-Zi Calendario Lunare</text>
+<text x="60" y="148" font-family="Georgia,'Times New Roman',serif" font-size="56" font-weight="700" fill="#f0ede8" filter="url(#sg)">Conosci te stesso</text>
+<rect x="60" y="165" width="500" height="2" rx="1" fill="url(#gl)"/>
+<text x="60" y="205" font-family="Georgia,serif" font-size="24" fill="#9a9690" font-style="italic">I Quattro Pilastri Ba-Zi rivelano la tua natura</text>
+
+<!-- ☯ large icon -->
+<text x="540" y="360" text-anchor="middle" font-family="serif" font-size="120" fill="#4a7c59" opacity="0.25">八字</text>
+
+<!-- 4 Pillars grid -->
+<g font-family="Georgia,serif">
+  <!-- Anno -->
+  <rect x="60" y="250" width="460" height="160" rx="18" fill="#4a7c5914" stroke="#4a7c59" stroke-width="1.2"/>
+  <text x="100" y="305" font-size="52" fill="#e8c860" opacity="0.7">年</text>
+  <text x="165" y="300" font-size="26" font-weight="700" fill="#f0ede8">Anno  —  Energia Sociale</text>
+  <text x="165" y="328" font-size="19" fill="#9a9690">Come il mondo ti percepisce.</text>
+  <text x="165" y="352" font-size="19" fill="#9a9690">Karma familiare · Animale zodiacale</text>
+  <rect x="60" y="250" width="6" height="160" rx="3" fill="#4a7c59"/>
+
+  <!-- Mese -->
+  <rect x="560" y="250" width="460" height="160" rx="18" fill="#8b691414" stroke="#8b6914" stroke-width="1.2"/>
+  <text x="600" y="305" font-size="52" fill="#e8c860" opacity="0.7">月</text>
+  <text x="665" y="300" font-size="26" font-weight="700" fill="#f0ede8">Mese  —  Carriera</text>
+  <text x="665" y="328" font-size="19" fill="#9a9690">Ambiente di crescita e genitori.</text>
+  <text x="665" y="352" font-size="19" fill="#9a9690">Ambizioni · Stagioni professionali</text>
+  <rect x="560" y="250" width="6" height="160" rx="3" fill="#8b6914"/>
+
+  <!-- Giorno -->
+  <rect x="60" y="440" width="460" height="160" rx="18" fill="#b5451b14" stroke="#b5451b" stroke-width="1.2"/>
+  <text x="100" y="495" font-size="52" fill="#b5451b" opacity="0.7">日</text>
+  <text x="165" y="490" font-size="26" font-weight="700" fill="#f0ede8">Giorno  —  Il Sé Autentico</text>
+  <text x="165" y="518" font-size="19" fill="#9a9690">Il pilastro più personale.</text>
+  <text x="165" y="542" font-size="19" fill="#9a9690">Il tuo elemento dominante · 日主</text>
+  <rect x="60" y="440" width="6" height="160" rx="3" fill="#b5451b"/>
+
+  <!-- Ora -->
+  <rect x="560" y="440" width="460" height="160" rx="18" fill="#1a527614" stroke="#1a5276" stroke-width="1.2"/>
+  <text x="600" y="495" font-size="52" fill="#1a5276" opacity="0.8">時</text>
+  <text x="665" y="490" font-size="26" font-weight="700" fill="#f0ede8">Ora  —  Mondo Interiore</text>
+  <text x="665" y="518" font-size="19" fill="#9a9690">Aspirazioni e desideri nascosti.</text>
+  <text x="665" y="542" font-size="19" fill="#9a9690">Percorso spirituale · Relazioni</text>
+  <rect x="560" y="440" width="6" height="160" rx="3" fill="#1a5276"/>
+</g>
+
+<!-- Big insight block -->
+<rect x="60" y="640" width="960" height="170" rx="20" fill="#ffffff07" stroke="#e8c860" stroke-width="1" stroke-opacity="0.3"/>
+<text x="540" y="692" text-anchor="middle" font-family="Georgia,serif" font-size="22" fill="#e8c860" letter-spacing="2">✦  Come si usa nella vita reale  ✦</text>
+<text x="540" y="726" text-anchor="middle" font-family="Georgia,serif" font-size="21" fill="#f0ede8">Ogni giorno l'app mostra la relazione tra il tuo elemento</text>
+<text x="540" y="752" text-anchor="middle" font-family="Georgia,serif" font-size="21" fill="#f0ede8">dominante (日主) e l'elemento del giorno:</text>
+<g transform="translate(540 790)" text-anchor="middle" font-family="Georgia,serif" font-size="19">
+  <text x="-340" fill="#4a7c59">Supporto 🌿</text>
+  <text x="-170" fill="#e8c860">Espressione ✨</text>
+  <text x="0"    fill="#f0ede8">Compagno 🤝</text>
+  <text x="170"  fill="#e8c860">Ricchezza 💰</text>
+  <text x="340"  fill="#9a9690">Autorità ⚖️</text>
+</g>
+
+<!-- Footer -->
+<rect x="0" y="900" width="1080" height="1" fill="url(#gl)" opacity="0.5"/>
+<use href="#logo-mini" x="52" y="915" width="60" height="60"/>
+<text x="125" y="948" font-family="Georgia,serif" font-size="17" fill="#4a7c59">Ba-Zi Calendario Lunare</text>
+<text x="1020" y="948" text-anchor="end" font-family="Georgia,serif" font-size="17" fill="#555">2 / 5</text>
+
+<!-- Slide dots -->
+<g transform="translate(540 1020)" text-anchor="middle">
+  <circle cx="-40" cy="0" r="3.5" fill="#fff" opacity="0.25"/>
+  <circle cx="-20" cy="0" r="5" fill="#4a7c59"/>
+  <circle cx="0"   cy="0" r="3.5" fill="#fff" opacity="0.25"/>
+  <circle cx="20"  cy="0" r="3.5" fill="#fff" opacity="0.25"/>
+  <circle cx="40"  cy="0" r="3.5" fill="#fff" opacity="0.25"/>
+</g>
+</svg>

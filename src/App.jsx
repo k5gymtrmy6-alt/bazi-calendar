@@ -1876,6 +1876,7 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
   const [showStats,setShowStats]=useState(false);
   const [showDeleted,setShowDeleted]=useState(false);
   const recentDeleted=cleanOld(routineDeleted);
+  const L = useL() || {};
 
   function toggle(id) {
     setRoutineLog(prev=>({...prev,[todayKey]:{...(prev[todayKey]||{}),[id]:!(prev[todayKey]?.[id])}}));
@@ -1890,11 +1891,11 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
       {/* Header row */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-        <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>🌅 Morning Routine</div>
+        <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{L.ui?.routine?.titolo || "🌅 Morning Routine"}</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label={"Impostazioni Routine"} onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
-            <DotsItem label={`Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
+            <DotsItem label={L.ui?.routine?.impostazioni || "Impostazioni Routine"} onClick={()=>{setImpTab("routine");setView("impostazioni");close();}}/>
+            <DotsItem label={`${L.ui?.routine?.eliminateRecente || "Eliminate di recente"}${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
       </div>
@@ -1903,15 +1904,15 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
       <div onClick={()=>setShowStats(s=>!s)} style={{background:"var(--accent-bg)",borderRadius:12,padding:"12px 14px",marginBottom:10,border:"0.5px solid var(--accent-border)",cursor:"pointer",userSelect:"none"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:11,color:"var(--text-sec)"}}>
-            {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
-            {" — "}{done}/{tasks.length} completate
+            {oggi.toLocaleDateString(i18n.language,{weekday:"long",day:"numeric",month:"long"})}
+            {" — "}{done}/{tasks.length} {L.ui?.routine?.completateLabel || "completate"}
           </div>
           <div style={{fontSize:11,color:"var(--accent)",background:"var(--accent-18)",borderRadius:6,padding:"3px 7px",fontWeight:500,flexShrink:0}}>{pct}%</div>
         </div>
         <div style={{marginTop:8,height:5,borderRadius:2.5,background:"var(--accent-22)",overflow:"hidden"}}>
           <div style={{height:"100%",borderRadius:2.5,background:"var(--accent)",width:`${pct}%`,transition:"width 0.4s"}}/>
         </div>
-        <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
+        <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>{L.ui?.routine?.storico || "tocca per lo storico"}</div>
       </div>
 
       {showStats && <RoutineStats routineLog={routineLog} routineCfg={routineCfg} onClose={()=>setShowStats(false)} dark={dark}/>}
@@ -1932,7 +1933,7 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:14,fontWeight:isDone?400:500,textDecoration:isDone?"line-through":"none",color:isDone?"var(--text-sec)":"var(--text)"}}>{task.label}</div>
-                {task.durata>0 && <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?"rip.":"min"}</div>}
+                {task.durata>0 && <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {tipo==="rep"?L.ui?.routine?.rip||"rip.":L.ui?.routine?.min||"min"}</div>}
               </div>
               {tipo==="tempo" && task.durata>0 && (
                 <div onClick={ev=>{ev.stopPropagation();setActiveTimer(timerOpen?null:task.id);}} style={{fontSize:18,lineHeight:1,cursor:"pointer",padding:"2px 4px",color:timerOpen?e.colore:"var(--text-dim)",transition:"color 0.15s"}}>⏱</div>
@@ -1944,30 +1945,30 @@ function MorningRoutineView({ routineCfg, setRoutineCfg, routineLog, setRoutineL
       })}
 
       {tasks.length===0 && (
-        <div style={{fontSize:13,color:"var(--text-sec)",textAlign:"center",padding:"2rem 1rem"}}>
-          Nessun task attivo.<br/>Configurali nelle Impostazioni → Routine.
+        <div style={{fontSize:13,color:"var(--text-sec)",textAlign:"center",padding:"2rem 1rem",whiteSpace:"pre-line"}}>
+          {L.ui?.routine?.nessunTask || "Nessun task attivo.\nConfigurali nelle Impostazioni → Routine."}
         </div>
       )}
       {done===tasks.length && tasks.length>0 && (
-        <div style={{textAlign:"center",padding:"0.75rem",fontSize:14,color:"var(--accent)",fontWeight:600}}>✅ Routine completata!</div>
+        <div style={{textAlign:"center",padding:"0.75rem",fontSize:14,color:"var(--accent)",fontWeight:600}}>{L.ui?.routine?.completata || "✅ Routine completata!"}</div>
       )}
 
       {/* Recently deleted modal */}
       {showDeleted && (
         <ModalBox onClose={()=>setShowDeleted(false)} dark={dark} zIndex={400}>
-          <ModalHeader title="🗑 Task eliminati di recente" onClose={()=>setShowDeleted(false)}/>
+          <ModalHeader title={`🗑 ${L.ui?.routine?.eliminati || "Task eliminati di recente"}`} onClose={()=>setShowDeleted(false)}/>
           <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
-            ⚠️ Conservati per <strong>30 giorni</strong>, poi rimossi definitivamente
+            ⚠️ {L.ui?.routine?.conservati || "Conservati per 30 giorni, poi rimossi definitivamente"}
           </div>
           {recentDeleted.length===0
-            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun task eliminato di recente.</div>
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>{L.ui?.routine?.nessunEliminato || "Nessun task eliminato di recente."}</div>
             : recentDeleted.map(task=>(
               <div key={task.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,color:"var(--text)"}}>{task.label}</div>
-                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?"rip.":"min"} · {formatDaysAgo(task.deletedAt)}</div>
+                  <div style={{fontSize:10,color:"var(--text-sub)"}}>{task.durata} {task.tipo==="rep"?L.ui?.routine?.rip||"rip.":L.ui?.routine?.min||"min"} · {formatDaysAgo(task.deletedAt)}</div>
                 </div>
-                <button onClick={()=>{restoreTask(task);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>{restoreTask(task);}} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{L.ui?.ripristina || "Ripristina"}</button>
               </div>
             ))
           }
@@ -1990,6 +1991,7 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
   const [showDeleted, setShowDeleted] = useState(false);
   const recentDeleted = cleanOld(habitDeleted);
   const dayEl = TRONCO_EL[baziDay(oggi).tronco], eDayEl = ELEMENTI[dayEl];
+  const L = useL() || {};
 
   // Only active habits shown in tracker
   const activeHabits = habitCfg.filter(h=>h.attiva!==false);
@@ -2020,18 +2022,18 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
   }
   const days7=Array.from({length:7},(_,i)=>{
     const d=new Date(oggi.getTime()-(6-i)*86400000);
-    return{key:d.toDateString(),label:d.toLocaleDateString("it-IT",{weekday:"short"}).slice(0,1).toUpperCase()};
+    return{key:d.toDateString(),label:d.toLocaleDateString(i18n.language,{weekday:"short"}).slice(0,1).toUpperCase()};
   });
 
   return (
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
       {/* Header row */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-        <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>📊 Habit Tracker</div>
+        <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{L.ui?.habit?.titolo || "📊 Habit Tracker"}</div>
         <DotsMenu render={close=>(
           <>
-            <DotsItem label={"Impostazioni Habit"} onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
-            <DotsItem label={`Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
+            <DotsItem label={L.ui?.habit?.impostazioni || "Impostazioni Habit"} onClick={()=>{setImpTab("habit");setView("impostazioni");close();}}/>
+            <DotsItem label={`${L.ui?.habit?.eliminateRecente || "Eliminate di recente"}${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} color="#e53e3e" onClick={()=>{setShowDeleted(true);close();}} sep/>
           </>
         )}/>
       </div>
@@ -2040,15 +2042,15 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
       <div onClick={()=>setShowStats(s=>!s)} style={{background:"var(--accent-bg)",borderRadius:12,padding:"12px 14px",marginBottom:showStats?8:12,border:"0.5px solid var(--accent-border)",cursor:"pointer",userSelect:"none"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:11,color:"var(--text-sec)"}}>
-            {oggi.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
-            {" — "}{logged}/{activeHabits.length} registrati
+            {oggi.toLocaleDateString(i18n.language,{weekday:"long",day:"numeric",month:"long"})}
+            {" — "}{logged}/{activeHabits.length} {L.ui?.habit?.registratiLabel || "registrati"}
           </div>
           <div style={{fontSize:11,color:"var(--accent)",background:"var(--accent-18)",borderRadius:6,padding:"3px 7px",fontWeight:500}}>{pctLogged}%</div>
         </div>
         <div style={{marginTop:8,height:5,borderRadius:2.5,background:"var(--accent-22)",overflow:"hidden"}}>
           <div style={{height:"100%",borderRadius:2.5,background:"var(--accent)",width:`${pctLogged}%`,transition:"width 0.4s"}}/>
         </div>
-        <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>tocca per lo storico</div>
+        <div style={{fontSize:10,color:"var(--text-sub)",marginTop:4,textAlign:"right"}}>{L.ui?.routine?.storico || "tocca per lo storico"}</div>
       </div>
       {showStats && <HabitStats habitCfg={habitCfg} habitLog={habitLog} onClose={()=>setShowStats(false)} dark={dark}/>}
 
@@ -2095,26 +2097,26 @@ function HabitTrackerView({ habitCfg, setHabitCfg, habitLog, setHabitLog, setVie
       })}
 
       {habitCfg.length===0 && (
-        <div style={{fontSize:13,color:"var(--text-sec)",textAlign:"center",padding:"2rem 1rem"}}>
-          Nessun habit definito.<br/>Aggiungili dalle Impostazioni (⋯ in alto).
+        <div style={{fontSize:13,color:"var(--text-sec)",textAlign:"center",padding:"2rem 1rem",whiteSpace:"pre-line"}}>
+          {L.ui?.habit?.nessunDefinito || "Nessun habit definito.\nAggiungili dalle Impostazioni (⋯ in alto)."}
         </div>
       )}
 
       {showDeleted && (
         <ModalBox onClose={()=>setShowDeleted(false)} dark={dark} zIndex={400}>
-          <ModalHeader title="🗑 Habit eliminati di recente" onClose={()=>setShowDeleted(false)}/>
+          <ModalHeader title={L.ui?.habit?.eliminati || "🗑 Habit eliminati di recente"} onClose={()=>setShowDeleted(false)}/>
           <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
-            ⚠️ Conservati per <strong>30 giorni</strong>, poi rimossi definitivamente
+            ⚠️ {L.ui?.routine?.conservati || "Conservati per 30 giorni, poi rimossi definitivamente"}
           </div>
           {recentDeleted.length===0
-            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessun habit eliminato di recente.</div>
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>{L.ui?.habit?.nessunEliminato || "Nessun habit eliminato di recente."}</div>
             : recentDeleted.map(habit=>(
               <div key={habit.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,color:"var(--text)"}}>{habit.label}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{habit.unita||"—"} · {formatDaysAgo(habit.deletedAt)}</div>
                 </div>
-                <button onClick={()=>restoreHabit(habit)} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>restoreHabit(habit)} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{L.ui?.ripristina || "Ripristina"}</button>
               </div>
             ))
           }
@@ -2132,6 +2134,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
   const [showDeleted,setShowDeleted]=useState(false);
   const list=todoLists.find(l=>l.id===activeId);
   const recentDeleted=cleanOld(todoDeleted);
+  const L = useL() || {};
 
   function addList() {
     if(!newListName.trim())return;
@@ -2171,8 +2174,8 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
         <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>✅ To-Do</div>
         <DotsMenu render={close=>(
           <>
-            {activeId && <DotsItem label="Elimina lista" color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
-            <DotsItem label={`Eliminate di recente${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
+            {activeId && <DotsItem label={L.ui?.todo?.eliminaLista || "Elimina lista"} color="#e53e3e" onClick={()=>{deleteList(activeId);close();}}/>}
+            <DotsItem label={`${L.ui?.todo?.eliminateRecente || "Eliminate di recente"}${recentDeleted.length>0?` (${recentDeleted.length})`:""}`} onClick={()=>{setShowDeleted(true);close();}} sep={!!activeId}/>
           </>
         )}/>
       </div>
@@ -2183,9 +2186,9 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
           </div>
         ))}
         {!showNewList
-          ? <button onClick={()=>setShowNewList(true)} style={{padding:"5px 10px",fontSize:11,borderRadius:14,background:"transparent",color:"var(--accent)",border:"1px dashed #4a7c59"}}>+ Nuova lista</button>
+          ? <button onClick={()=>setShowNewList(true)} style={{padding:"5px 10px",fontSize:11,borderRadius:14,background:"transparent",color:"var(--accent)",border:"1px dashed #4a7c59"}}>{L.ui?.todo?.nuovaLista || "+ Nuova lista"}</button>
           : <div style={{display:"flex",gap:4,alignItems:"center"}}>
-              <input autoFocus value={newListName} onChange={e=>setNewListName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addList();if(e.key==="Escape")setShowNewList(false);}} placeholder="Nome lista" style={{fontSize:12,width:110}}/>
+              <input autoFocus value={newListName} onChange={e=>setNewListName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addList();if(e.key==="Escape")setShowNewList(false);}} placeholder={L.ui?.todo?.nomeLista || "Nome lista"} style={{fontSize:12,width:110}}/>
               <button onClick={addList} style={{fontSize:12,padding:"4px 8px"}}>OK</button>
               <button onClick={()=>setShowNewList(false)} style={{fontSize:12,padding:"4px 6px",background:"none",border:"none"}}>✕</button>
             </div>
@@ -2198,7 +2201,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
             {list.items.length>0 && <div style={{fontSize:11,color:"var(--text-sub)"}}>{done.length}/{list.items.length} completati</div>}
           </div>
           <div style={{display:"flex",gap:6,marginBottom:12}}>
-            <input value={newItemText} onChange={e=>setNewItemText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addItem()} placeholder="Aggiungi elemento…" style={{flex:1,fontSize:13}}/>
+            <input value={newItemText} onChange={e=>setNewItemText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addItem()} placeholder={L.ui?.todo?.aggiungiElemento || "Aggiungi elemento…"} style={{flex:1,fontSize:13}}/>
             <button onClick={addItem} style={{padding:"6px 14px",fontWeight:600,background:"var(--accent)",color:"white",border:"none",borderRadius:6}}>+</button>
           </div>
           {pending.map(item=>(
@@ -2210,7 +2213,7 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
           ))}
           {done.length>0 && (
             <>
-              <div style={{fontSize:10,color:"var(--text-sub)",textTransform:"uppercase",letterSpacing:1,marginTop:12,marginBottom:6}}>Completati</div>
+              <div style={{fontSize:10,color:"var(--text-sub)",textTransform:"uppercase",letterSpacing:1,marginTop:12,marginBottom:6}}>{L.ui?.todo?.completati || "Completati"}</div>
               {done.map(item=>(
                 <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"transparent",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:4}}>
                   <div onClick={()=>toggleItem(item.id)} style={{width:20,height:20,borderRadius:4,cursor:"pointer",flexShrink:0,background:"var(--accent)",border:"2px solid #4a7c59",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -2222,27 +2225,27 @@ function TodoView({ todoLists, setTodoLists, todoDeleted, setTodoDeleted, dark }
               ))}
             </>
           )}
-          {list.items.length===0 && <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"2rem"}}>Lista vuota — aggiungi il primo elemento!</div>}
+          {list.items.length===0 && <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"2rem"}}>{L.ui?.todo?.listaVuota || "Lista vuota — aggiungi il primo elemento!"}</div>}
         </>
       ) : (
-        <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"3rem 1rem"}}>Crea la tua prima lista.</div>
+        <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"3rem 1rem"}}>{L.ui?.todo?.primaLista || "Crea la tua prima lista."}</div>
       )}
 
       {showDeleted && (
         <ModalBox onClose={()=>setShowDeleted(false)} dark={dark} zIndex={400}>
-          <ModalHeader title="🗑 Liste eliminate di recente" onClose={()=>setShowDeleted(false)}/>
+          <ModalHeader title={L.ui?.todo?.listeEliminate || "🗑 Liste eliminate di recente"} onClose={()=>setShowDeleted(false)}/>
           <div style={{fontSize:11,color:"var(--text-sub)",textAlign:"center",padding:"8px 10px",background:"var(--bg-wash)",borderRadius:8,marginBottom:10,border:"0.5px solid var(--border-ter)"}}>
-            ⚠️ Conservate per <strong>30 giorni</strong>, poi rimosse definitivamente
+            ⚠️ {L.ui?.todo?.conservate || "Conservate per 30 giorni, poi rimosse definitivamente"}
           </div>
           {recentDeleted.length===0
-            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>Nessuna lista eliminata di recente.</div>
+            ? <div style={{fontSize:13,color:"var(--text-sub)",textAlign:"center",padding:"1rem"}}>{L.ui?.todo?.nessunEliminato || "Nessuna lista eliminata di recente."}</div>
             : recentDeleted.map(lst=>(
               <div key={lst.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg-card)",border:"0.5px solid var(--border-ter)",borderRadius:8,marginBottom:6}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,color:"var(--text)"}}>{lst.nome}</div>
                   <div style={{fontSize:10,color:"var(--text-sub)"}}>{lst.items?.length||0} elementi · {formatDaysAgo(lst.deletedAt)}</div>
                 </div>
-                <button onClick={()=>restoreList(lst)} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Ripristina</button>
+                <button onClick={()=>restoreList(lst)} style={{fontSize:11,padding:"4px 10px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{L.ui?.ripristina || "Ripristina"}</button>
               </div>
             ))
           }
@@ -2540,6 +2543,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
   const recentRDel = cleanOld(routineDeleted), recentHDel = cleanOld(habitDeleted);
   const recentTDel = cleanOld(todoDeleted||[]);
   const totalTrash = recentRDel.length + recentHDel.length + recentTDel.length;
+  const L = useL() || {};
 
   // keep section in sync when navigating from DotsMenu
   useEffect(() => { setSection(defaultSection); }, [defaultSection]);
@@ -2571,7 +2575,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
     <div style={{padding:"1rem",maxWidth:480,margin:"0 auto"}}>
       <div style={{fontSize:16,fontWeight:500,marginBottom:12,color:"var(--text)",letterSpacing:"0.5px"}}>Impostazioni</div>
       <div style={{display:"flex",gap:3,marginBottom:18,flexWrap:"wrap"}}>
-        {[{k:"generali",l:"Generali"},{k:"calendario",l:"Calendario"},{k:"routine",l:"Routine"},{k:"habit",l:"Habit"},{k:"account",l:"Account"}].map(t=>(
+        {[{k:"generali",l:L.ui?.impostazioni?.generali||"Generali"},{k:"calendario",l:L.ui?.impostazioni?.calendario||"Calendario"},{k:"routine",l:L.ui?.impostazioni?.routineTab||"Routine"},{k:"habit",l:L.ui?.impostazioni?.habit||"Habit"},{k:"account",l:L.ui?.impostazioni?.account||"Account"}].map(t=>(
           <button key={t.k} onClick={()=>setSection(t.k)} style={{flex:1,minWidth:58,fontSize:10,padding:"7px 2px",background:section===t.k?"var(--accent)":"var(--bg-gray)",color:section===t.k?"white":"var(--text-sec)",border:"none",borderRadius:8,cursor:"pointer",fontWeight:section===t.k?600:400}}>{t.l}</button>
         ))}
       </div>
@@ -2581,13 +2585,13 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* Tema colore */}
           <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Colore tema app</div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>{L.ui?.impostazioni?.temaColore || "Colore tema app"}</div>
             <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
               {Object.entries(ELEMENTI).map(([k,e])=>(
                 <div key={k} onClick={()=>setCfg(c=>({...c,accentColor:e.colore,followDayElement:false}))} style={{width:28,height:28,borderRadius:"50%",background:e.colore,cursor:"pointer",border:(cfg.accentColor===e.colore&&!cfg.followDayElement)?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0,transition:"border 0.1s"}}/>
               ))}
             </div>
-            <Toggle label="Segui elemento del giorno" on={cfg.followDayElement||false} onChange={v=>setCfg(c=>({...c,followDayElement:v}))}/>
+            <Toggle label={L.ui?.impostazioni?.seguiElemento || "Segui elemento del giorno"} on={cfg.followDayElement||false} onChange={v=>setCfg(c=>({...c,followDayElement:v}))}/>
             {cfg.followDayElement && (()=>{
               const todayEl=TRONCO_EL[baziDay(new Date()).tronco];
               const e=ELEMENTI[todayEl];
@@ -2595,7 +2599,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 <div style={{marginTop:6,padding:"6px 10px",background:elbg(todayEl,dark),borderRadius:8,border:`0.5px solid ${e.colore}44`,display:"flex",alignItems:"center",gap:8}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:e.colore,flexShrink:0}}/>
                   <span style={{fontSize:11,color:dark?"rgba(255,255,255,0.85)":e.colore,fontWeight:500}}>
-                    Oggi: {e.char} {e.nome} — <span style={{fontWeight:400,color:"var(--text-sec)"}}>il tema segue il pilastro del giorno</span>
+                    Oggi: {e.char} {e.nome} — <span style={{fontWeight:400,color:"var(--text-sec)"}}>{L.ui?.impostazioni?.seguiDescTheme || "il tema segue il pilastro del giorno"}</span>
                   </span>
                 </div>
               );
@@ -2619,10 +2623,10 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           {/* Unità di misura */}
           <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Unità di misura</div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>{L.ui?.impostazioni?.misura || "Unità di misura"}</div>
             <div style={{display:"flex",gap:16}}>
               <div>
-                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Temperatura</div>
+                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>{L.ui?.impostazioni?.temperatura || "Temperatura"}</div>
                 <div style={{display:"flex",gap:4}}>
                   {[{k:"C",l:"°C"},{k:"F",l:"°F"}].map(({k,l})=>{
                     const a=(cfg.tempUnit||"C")===k;
@@ -2631,7 +2635,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                 </div>
               </div>
               <div>
-                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>Distanza</div>
+                <div style={{fontSize:11,color:"var(--text-ter)",marginBottom:5}}>{L.ui?.impostazioni?.distanza || "Distanza"}</div>
                 <div style={{display:"flex",gap:4}}>
                   {[{k:"km",l:"km"},{k:"mi",l:"mi"}].map(({k,l})=>{
                     const a=(cfg.distUnit||"km")===k;
@@ -2646,12 +2650,12 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           <button onClick={onOpenTour} style={{width:"100%",padding:"11px",borderRadius:10,
             background:dark?"var(--bg-sec)":"var(--bg-wash)",color:"var(--text-sec)",
             border:"0.5px solid var(--border-sec)",cursor:"pointer",fontSize:13,fontWeight:500,textAlign:"center"}}>
-            🗺️ Tour dell'app
+            {L.ui?.impostazioni?.tourApp || "🗺️ Tour dell'app"}
           </button>
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           {/* Posizione */}
           <div>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>📍 Posizione (orari luna + Ba-Zi preciso)</div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>{L.ui?.impostazioni?.posizioneLabel || "📍 Posizione (orari luna + Ba-Zi preciso)"}</div>
             <div style={{display:"flex",gap:8,marginBottom:8}}>
               <div style={{flex:1}}>
                 <div style={{fontSize:10,color:"var(--text-ter)",marginBottom:3}}>Latitudine</div>
@@ -2721,30 +2725,30 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             </div>
           )}
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
-          <Toggle label="🔔 Promemoria routine" on={cfg.reminderEnabled||false} onChange={requestNotifPermission}/>
+          <Toggle label={L.ui?.impostazioni?.proRutina || "🔔 Promemoria routine"} on={cfg.reminderEnabled||false} onChange={requestNotifPermission}/>
           {cfg.reminderEnabled && (
             <div style={{display:"flex",alignItems:"center",gap:10,paddingLeft:4}}>
-              <span style={{fontSize:12,color:"var(--text-sec)"}}>Orario</span>
+              <span style={{fontSize:12,color:"var(--text-sec)"}}>{L.ui?.impostazioni?.orario || "Orario"}</span>
               <input type="time" value={cfg.reminderTime||"07:00"} onChange={e=>setCfg(c=>({...c,reminderTime:e.target.value}))} style={{fontSize:13,width:110,flex:"none"}}/>
-              <span style={{fontSize:11,color:"var(--text-sub)"}}>ogni giorno</span>
+              <span style={{fontSize:11,color:"var(--text-sub)"}}>{L.ui?.impostazioni?.ogniGiorno || "ogni giorno"}</span>
             </div>
           )}
           <div style={{borderTop:"0.5px solid var(--border-ter)"}}/>
           {/* Svuota cestini */}
           <div style={{paddingTop:2}}>
-            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>Cestini eliminati</div>
+            <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:8}}>{L.ui?.impostazioni?.cestini || "Cestini eliminati"}</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:totalTrash>0?(dark?"#2a0a0a":"#fff5f5"):"var(--bg-card)",borderRadius:10,border:`0.5px solid ${totalTrash>0?"#e53e3e33":"var(--border-ter)"}`}}>
               <div>
                 <div style={{fontSize:13,color:totalTrash>0?"#e53e3e":"var(--text-sub)",fontWeight:500}}>
-                  {totalTrash>0 ? `${totalTrash} element${totalTrash===1?"o":"i"} nel cestino` : "Cestini vuoti"}
+                  {totalTrash>0 ? `${totalTrash} element${totalTrash===1?"o":"i"} nel cestino` : (L.ui?.impostazioni?.cestiniVuoti || "Cestini vuoti")}
                 </div>
                 <div style={{fontSize:10,color:"var(--text-ter)",marginTop:2}}>
                   Routine: {recentRDel.length} · Habit: {recentHDel.length} · To-Do: {recentTDel.length}
                 </div>
               </div>
               {totalTrash>0 && (
-                <button onClick={()=>{if(window.confirm(`Eliminare definitivamente ${totalTrash} element${totalTrash===1?"o":"i"}? L'azione non è reversibile.`)){setRoutineDeleted([]);setHabitDeleted([]);setTodoDeleted([]);}}} style={{fontSize:11,padding:"5px 12px",background:"#e53e3e",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>
-                  🗑 Svuota
+                <button onClick={()=>{if(window.confirm(i18n.t("ui.impostazioni.confermaEliminazione",{n:totalTrash}))){setRoutineDeleted([]);setHabitDeleted([]);setTodoDeleted([]);}}} style={{fontSize:11,padding:"5px 12px",background:"#e53e3e",color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:500,flexShrink:0}}>
+                  {L.ui?.impostazioni?.svuota || "🗑 Svuota"}
                 </button>
               )}
             </div>
@@ -2754,7 +2758,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
       {section==="routine" && (
         <div>
-          <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Gestisci i task della Morning Routine. Tieni ≡ per riordinare.</div>
+          <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>{L.ui?.impostazioni?.gestioneRoutine || "Gestisci i task della Morning Routine. Tieni ≡ per riordinare."}</div>
           <SortableList items={routineCfg} onReorder={setRoutineCfg} renderItem={(task, _i, dragHandle) => {
             const tipo = task.tipo||"tempo";
             if (editingTask === task.id) return (
@@ -2765,7 +2769,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   <TipoToggle value={editTipo} onChange={setEditTipo}/>
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,label:editLabel.trim()||t.label,durata:editDur,tipo:editTipo}:t));setEditingTask(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>{setRoutineCfg(prev=>prev.map(t=>t.id===task.id?{...t,label:editLabel.trim()||t.label,durata:editDur,tipo:editTipo}:t));setEditingTask(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{"✓ " + (L.ui?.salva || "Salva")}</button>
                   <button onClick={()=>setEditingTask(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
                 </div>
               </div>
@@ -2788,9 +2792,9 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           }}/>
           {/* Add task form */}
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
-            <div style={{fontSize:12,fontWeight:600,color:"var(--accent)",marginBottom:8}}>+ Aggiungi task</div>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--accent)",marginBottom:8}}>{L.ui?.impostazioni?.aggiungiTask || "+ Aggiungi task"}</div>
             <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-              <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&document.getElementById("btn-add-task")?.click()} placeholder="Nome task" style={{flex:1,minWidth:100,fontSize:12}}/>
+              <input value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&document.getElementById("btn-add-task")?.click()} placeholder={L.ui?.impostazioni?.nomeTask || "Nome task"} style={{flex:1,minWidth:100,fontSize:12}}/>
               <input type="number" value={newTaskDur} onChange={e=>setNewTaskDur(+e.target.value)} min={0} style={{width:52,fontSize:12}}/>
               <TipoToggle value={newTaskTipo} onChange={setNewTaskTipo}/>
               <button id="btn-add-task" onClick={()=>{if(!newTask.trim())return;setRoutineCfg(prev=>[...prev,{id:Date.now().toString(),label:newTask.trim(),durata:newTaskDur,tipo:newTaskTipo,attiva:true}]);setNewTask("");setNewTaskDur(5);setNewTaskTipo("tempo");}} style={{padding:"5px 12px",fontSize:12,background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>OK</button>
@@ -2799,7 +2803,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           {/* Link to recently deleted */}
           <div style={{marginTop:14,paddingTop:12,borderTop:"0.5px solid var(--border-ter)",textAlign:"center"}}>
             <button onClick={()=>setShowRDel(true)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#e53e3e",padding:"4px 8px"}}>
-              🗑 Eliminate di recente{recentRDel.length>0?` (${recentRDel.length})`:""}
+              {L.ui?.impostazioni?.eliminateRecente || "🗑 Eliminate di recente"}{recentRDel.length>0?` (${recentRDel.length})`:""}
             </button>
           </div>
         </div>
@@ -2807,20 +2811,20 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
 
       {section==="habit" && (
         <div>
-          <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>Definisci i tuoi habit. Tieni ≡ per riordinare, icona matita per modificare o cambiare tipo.</div>
+          <div style={{fontSize:12,color:"var(--text-sec)",marginBottom:12}}>{L.ui?.impostazioni?.gestioneHabit || "Definisci i tuoi habit. Tieni ≡ per riordinare, icona matita per modificare o cambiare tipo."}</div>
           <SortableList items={habitCfg} onReorder={setHabitCfg} renderItem={(habit, _i, dragHandle) => {
             const hc = habit.colore||HABIT_COLORS[0];
             if (editingHabit === habit.id) return (
               <div style={{padding:"10px 12px",background:"var(--accent-bg)",border:"0.5px solid var(--accent-border)",borderRadius:8,marginBottom:5}}>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:8}}>
-                  <input autoFocus value={editHLabel} onChange={e=>setEditHLabel(e.target.value)} placeholder="Nome" style={{flex:1,minWidth:100,fontSize:12}}/>
-                  <input value={editHUnit} onChange={e=>setEditHUnit(e.target.value)} placeholder="Unità" style={{width:64,fontSize:12}}/>
+                  <input autoFocus value={editHLabel} onChange={e=>setEditHLabel(e.target.value)} placeholder={L.ui?.impostazioni?.nomeEdit || "Nome"} style={{flex:1,minWidth:100,fontSize:12}}/>
+                  <input value={editHUnit} onChange={e=>setEditHUnit(e.target.value)} placeholder={L.ui?.impostazioni?.unitaEdit || "Unità"} style={{width:64,fontSize:12}}/>
                 </div>
                 <div style={{display:"flex",gap:6,marginBottom:8}}>
                   {HABIT_COLORS.map(c=>(<div key={c} onClick={()=>setEditHColore(c)} style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",border:editHColore===c?`3px solid ${dark?"#fff":"#111"}`:"2px solid transparent",flexShrink:0}}/>))}
                 </div>
                 <div style={{display:"flex",gap:4,marginBottom:10}}>
-                  {[{k:false,ico:<IconCost size={18}/>,l:"Costruire",desc:"streak = giorni con"},{k:true,ico:<IconSmett size={18}/>,l:"Smettere",desc:"streak = giorni senza"}].map(({k,ico,l,desc})=>(
+                  {[{k:false,ico:<IconCost size={18}/>,l:L.ui?.impostazioni?.costruire||"Costruire",desc:L.ui?.impostazioni?.streakCon||"streak = giorni con"},{k:true,ico:<IconSmett size={18}/>,l:L.ui?.impostazioni?.smettere||"Smettere",desc:L.ui?.impostazioni?.streakSenza||"streak = giorni senza"}].map(({k,ico,l,desc})=>(
                     <div key={String(k)} onClick={()=>setEditHSmettere(k)} style={{
                       flex:1,textAlign:"center",padding:"8px 4px",borderRadius:8,cursor:"pointer",
                       background:editHSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
@@ -2834,7 +2838,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
                   ))}
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim(),colore:editHColore,modoSmettere:editHSmettere}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>✓ Salva</button>
+                  <button onClick={()=>{setHabitCfg(prev=>prev.map(h=>h.id===habit.id?{...h,label:editHLabel.trim()||h.label,unita:editHUnit.trim(),colore:editHColore,modoSmettere:editHSmettere}:h));setEditingHabit(null);}} style={{flex:1,fontSize:12,padding:"6px",background:"var(--accent)",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>{"✓ " + (L.ui?.salva || "Salva")}</button>
                   <button onClick={()=>setEditingHabit(null)} style={{fontSize:12,padding:"6px 10px",background:"none",border:"0.5px solid var(--border-sec)",borderRadius:6,cursor:"pointer",color:"var(--text-sec)"}}>✕</button>
                 </div>
               </div>
@@ -2861,10 +2865,10 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             );
           }}/>
           <div style={{marginTop:12,padding:"10px 12px",background:"var(--accent-bg)",borderRadius:8,border:"0.5px solid var(--accent-border)"}}>
-            <div style={{fontSize:12,fontWeight:600,color:"var(--accent)",marginBottom:8}}>+ Aggiungi habit</div>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--accent)",marginBottom:8}}>{L.ui?.impostazioni?.aggiungiHabit || "+ Aggiungi habit"}</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-              <input value={newHabit} onChange={e=>setNewHabit(e.target.value)} placeholder="Nome (es. Acqua)" style={{flex:1,minWidth:100,fontSize:12}}/>
-              <input value={newHabitUnit} onChange={e=>setNewHabitUnit(e.target.value)} placeholder="Unità (l, h, min…)" style={{flex:1,minWidth:80,fontSize:12}}/>
+              <input value={newHabit} onChange={e=>setNewHabit(e.target.value)} placeholder={L.ui?.impostazioni?.nomeHabit || "Nome (es. Acqua)"} style={{flex:1,minWidth:100,fontSize:12}}/>
+              <input value={newHabitUnit} onChange={e=>setNewHabitUnit(e.target.value)} placeholder={L.ui?.impostazioni?.unitaHabit || "Unità (l, h, min…)"} style={{flex:1,minWidth:80,fontSize:12}}/>
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
               {HABIT_COLORS.map(c=>(
@@ -2873,7 +2877,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
             </div>
             {/* Tipo: costruire vs eliminare */}
             <div style={{display:"flex",gap:4,marginBottom:10}}>
-              {[{k:false,ico:<IconCost size={16}/>,l:"Costruire"},{k:true,ico:<IconSmett size={16}/>,l:"Smettere"}].map(({k,ico,l})=>(
+              {[{k:false,ico:<IconCost size={16}/>,l:L.ui?.impostazioni?.costruire||"Costruire"},{k:true,ico:<IconSmett size={16}/>,l:L.ui?.impostazioni?.smettere||"Smettere"}].map(({k,ico,l})=>(
                 <div key={String(k)} onClick={()=>setNewHabitSmettere(k)} style={{
                   flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,cursor:"pointer",
                   background:newHabitSmettere===k?(k?"#e53e3e22":"var(--accent-bg)"):"transparent",
@@ -2889,7 +2893,7 @@ function ImpostazioniView({ cfg, setCfg, routineCfg, setRoutineCfg, routineDelet
           {/* Link to recently deleted */}
           <div style={{marginTop:14,paddingTop:12,borderTop:"0.5px solid var(--border-ter)",textAlign:"center"}}>
             <button onClick={()=>setShowHDel(true)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#e53e3e",padding:"4px 8px"}}>
-              🗑 Eliminate di recente{recentHDel.length>0?` (${recentHDel.length})`:""}
+              {L.ui?.impostazioni?.eliminateRecente || "🗑 Eliminate di recente"}{recentHDel.length>0?` (${recentHDel.length})`:""}
             </button>
           </div>
         </div>
